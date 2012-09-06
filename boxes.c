@@ -838,6 +838,7 @@ void formatCheckCursor(view *view, long *cX, long *cY, char *input)
 }
 
 // TODO - Should convert control characters to reverse video, and deal with UTF8.
+// TODO - We get passed a NULL input, apparently when the file length is close to the screen length.  See the mailing list for details.  Fix that.
 int formatLine(view *view, char *input, char **output)
 {
 	int len = strlen(input), i = 0, o = 0;
