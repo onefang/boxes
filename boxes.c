@@ -13,43 +13,43 @@
 USE_BOXES(NEWTOY(boxes, "w#h#m(mode):a(stickchars)1", TOYFLAG_USR|TOYFLAG_BIN))
 
 config BOXES
-	bool "boxes"
-	default n
-	help
-	  usage: boxes [-m|--mode mode] [-a|--stickchars] [-w width] [-h height]
+  bool "boxes"
+  default n
+  help
+    usage: boxes [-m|--mode mode] [-a|--stickchars] [-w width] [-h height]
 
-	  Generic text editor and pager.
+    Generic text editor and pager.
 
-	  Mode selects which editor or text viewr it emulates, the choices are -
-	    emacs is a microemacs type editor.
-	    joe is a joe / wordstar type editor.
-	    less is a less type pager.
-	    mcedit (the default) is cooledit / mcedit type editor.
-	    more is a more type pager.
-	    nano is a nano / pico type editor.
-	    vi is a vi type editor.
+    Mode selects which editor or text viewr it emulates, the choices are -
+      emacs is a microemacs type editor.
+      joe is a joe / wordstar type editor.
+      less is a less type pager.
+      mcedit (the default) is cooledit / mcedit type editor.
+      more is a more type pager.
+      nano is a nano / pico type editor.
+      vi is a vi type editor.
 
-	  Stick chars means to use ASCII for the boxes instead of "graphics" characters.
+    Stick chars means to use ASCII for the boxes instead of "graphics" characters.
 */
 
 #include "toys.h"
 
 GLOBALS(
-	char *mode;
-	long h, w;
-	// TODO - actually, these should be globals in the library, and leave this buffer alone.
-	int stillRunning;
-	int overWriteMode;
+  char *mode;
+  long h, w;
+  // TODO - actually, these should be globals in the library, and leave this buffer alone.
+  int stillRunning;
+  int overWriteMode;
 )
 
 #define TT this.boxes
 
-#define FLAG_a	2
-#define FLAG_m	4
-#define FLAG_h	8
-#define FLAG_w	16
+#define FLAG_a  2
+#define FLAG_m  4
+#define FLAG_h  8
+#define FLAG_w  16
 
-#define MEM_SIZE	128
+#define MEM_SIZE  128
 
 /* This is trying to be a generic text editing, text viewing, and terminal
  * handling system.  The current code is a work in progress, and the design
@@ -291,8 +291,8 @@ sized morsels?
 
 struct key
 {
-	char *code;
-	char *name;
+  char *code;
+  char *name;
 };
 
 // This table includes some variations I have found on some terminals, and the MC "Esc digit" versions.
@@ -309,126 +309,126 @@ struct key
 //          Plus, human typing speeds wont need binary searching speeds on this small table.
 struct key keys[] =
 {
-	{"\x1B[3~",		"Del"},
-	{"\x1B[2~",		"Ins"},
-	{"\x1B[D",		"Left"},
-	{"\x1BOD",		"Left"},
-	{"\x1B[C",		"Right"},
-	{"\x1BOC",		"Right"},
-	{"\x1B[A",		"Up"},
-	{"\x1BOA",		"Up"},
-	{"\x1B[B",		"Down"},
-	{"\x1BOB",		"Down"},
-	{"\x1B\x4f\x48",	"Home"},
-	{"\x1B[1~",		"Home"},
-	{"\x1B[7~",		"Home"},
-	{"\x1B[H",		"Home"},
-	{"\x1BOH",		"Home"},
-	{"\x1B\x4f\x46",	"End"},
-	{"\x1B[4~",		"End"},
-	{"\x1B[8~",		"End"},
-	{"\x1B[F",		"End"},
-	{"\x1BOF",		"End"},
-	{"\x1BOw",		"End"},
-	{"\x1B[5~",		"PgUp"},
-	{"\x1B[6~",		"PgDn"},
-	{"\x1B\x4F\x50",	"F1"},
-	{"\x1B[11~",		"F1"},
-	{"\x1B\x31",		"F1"},
-	{"\x1BOP",		"F1"},
-	{"\x1B\x4F\x51",	"F2"},
-	{"\x1B[12~",		"F2"},
-	{"\x1B\x32",		"F2"},
-	{"\x1BOO",		"F2"},
-	{"\x1B\x4F\x52",	"F3"},
-	{"\x1B[13~",		"F3"},
-	{"\x1B\x33~",		"F3"},
-	{"\x1BOR",		"F3"},
-	{"\x1B\x4F\x53",	"F4"},
-	{"\x1B[14~",		"F4"},
-	{"\x1B\x34",		"F4"},
-	{"\x1BOS",		"F4"},
-	{"\x1B[15~",		"F5"},
-	{"\x1B\x35",		"F5"},
-	{"\x1B[17~",		"F6"},
-	{"\x1B\x36",		"F6"},
-	{"\x1B[18~",		"F7"},
-	{"\x1B\x37",		"F7"},
-	{"\x1B[19~",		"F8"},
-	{"\x1B\x38",		"F8"},
-	{"\x1B[20~",		"F9"},
-	{"\x1B\x39",		"F9"},
-	{"\x1B[21~",		"F10"},
-	{"\x1B\x30",		"F10"},
-	{"\x1B[23~",		"F11"},
-	{"\x1B[24~",		"F12"},
-	{"\x1B\x4f\x31;2P",	"Shift F1"},
-	{"\x1B[1;2P",		"Shift F1"},
-	{"\x1B\x4f\x31;2Q",	"Shift F2"},
-	{"\x1B[1;2Q",		"Shift F2"},
-	{"\x1B\x4f\x31;2R",	"Shift F3"},
-	{"\x1B[1;2R",		"Shift F3"},
-	{"\x1B\x4f\x31;2S",	"Shift F4"},
-	{"\x1B[1;2S",		"Shift F4"},
-	{"\x1B[15;2~",		"Shift F5"},
-	{"\x1B[17;2~",		"Shift F6"},
-	{"\x1B[18;2~",		"Shift F7"},
-	{"\x1B[19;2~",		"Shift F8"},
-	{"\x1B[20;2~",		"Shift F9"},
-	{"\x1B[21;2~",		"Shift F10"},
-	{"\x1B[23;2~",		"Shift F11"},
-	{"\x1B[24;2~",		"Shift F12"},
+  {"\x1B[3~",		"Del"},
+  {"\x1B[2~",		"Ins"},
+  {"\x1B[D",		"Left"},
+  {"\x1BOD",		"Left"},
+  {"\x1B[C",		"Right"},
+  {"\x1BOC",		"Right"},
+  {"\x1B[A",		"Up"},
+  {"\x1BOA",		"Up"},
+  {"\x1B[B",		"Down"},
+  {"\x1BOB",		"Down"},
+  {"\x1B\x4f\x48",	"Home"},
+  {"\x1B[1~",		"Home"},
+  {"\x1B[7~",		"Home"},
+  {"\x1B[H",		"Home"},
+  {"\x1BOH",		"Home"},
+  {"\x1B\x4f\x46",	"End"},
+  {"\x1B[4~",		"End"},
+  {"\x1B[8~",		"End"},
+  {"\x1B[F",		"End"},
+  {"\x1BOF",		"End"},
+  {"\x1BOw",		"End"},
+  {"\x1B[5~",		"PgUp"},
+  {"\x1B[6~",		"PgDn"},
+  {"\x1B\x4F\x50",	"F1"},
+  {"\x1B[11~",		"F1"},
+  {"\x1B\x31",		"F1"},
+  {"\x1BOP",		"F1"},
+  {"\x1B\x4F\x51",	"F2"},
+  {"\x1B[12~",		"F2"},
+  {"\x1B\x32",		"F2"},
+  {"\x1BOO",		"F2"},
+  {"\x1B\x4F\x52",	"F3"},
+  {"\x1B[13~",		"F3"},
+  {"\x1B\x33~",		"F3"},
+  {"\x1BOR",		"F3"},
+  {"\x1B\x4F\x53",	"F4"},
+  {"\x1B[14~",		"F4"},
+  {"\x1B\x34",		"F4"},
+  {"\x1BOS",		"F4"},
+  {"\x1B[15~",		"F5"},
+  {"\x1B\x35",		"F5"},
+  {"\x1B[17~",		"F6"},
+  {"\x1B\x36",		"F6"},
+  {"\x1B[18~",		"F7"},
+  {"\x1B\x37",		"F7"},
+  {"\x1B[19~",		"F8"},
+  {"\x1B\x38",		"F8"},
+  {"\x1B[20~",		"F9"},
+  {"\x1B\x39",		"F9"},
+  {"\x1B[21~",		"F10"},
+  {"\x1B\x30",		"F10"},
+  {"\x1B[23~",		"F11"},
+  {"\x1B[24~",		"F12"},
+  {"\x1B\x4f\x31;2P",	"Shift F1"},
+  {"\x1B[1;2P",		"Shift F1"},
+  {"\x1B\x4f\x31;2Q",	"Shift F2"},
+  {"\x1B[1;2Q",		"Shift F2"},
+  {"\x1B\x4f\x31;2R",	"Shift F3"},
+  {"\x1B[1;2R",		"Shift F3"},
+  {"\x1B\x4f\x31;2S",	"Shift F4"},
+  {"\x1B[1;2S",		"Shift F4"},
+  {"\x1B[15;2~",	"Shift F5"},
+  {"\x1B[17;2~",	"Shift F6"},
+  {"\x1B[18;2~",	"Shift F7"},
+  {"\x1B[19;2~",	"Shift F8"},
+  {"\x1B[20;2~",	"Shift F9"},
+  {"\x1B[21;2~",	"Shift F10"},
+  {"\x1B[23;2~",	"Shift F11"},
+  {"\x1B[24;2~",	"Shift F12"},
 
-//	{"\x00",		"^@"},		// NUL Commented out coz it's the C string terminator, and may confuse things.
-	{"\x01",		"^A"},		// SOH
-	{"\x02",		"^B"},		// STX
-	{"\x03",		"^C"},		// ETX SIGTERM
-	{"\x04",		"^D"},		// EOT
-	{"\x05",		"^E"},		// ENQ
-	{"\x06",		"^F"},		// ACK
-	{"\x07",		"^G"},		// BEL
-	{"\x08",		"Del"},		// BS  Delete key, usually.
-	{"\x09",		"Tab"},		// HT  Tab key.
-	{"\x0A",		"Return"},	// LF  Return key.  Roxterm at least is translating both Ctrl-J and Ctrl-M into this.
-	{"\x0B",		"^K"},		// VT
-	{"\x0C",		"^L"},		// FF
-	{"\x0D",		"^M"},		// CR  Other Return key, usually.
-	{"\x0E",		"^N"},		// SO
-	{"\x0F",		"^O"},		// SI
-	{"\x10",		"^P"},		// DLE
-	{"\x11",		"^Q"},		// DC1
-	{"\x12",		"^R"},		// DC2
-	{"\x13",		"^S"},		// DC3
-	{"\x14",		"^T"},		// DC4
-	{"\x15",		"^U"},		// NAK
-	{"\x16",		"^V"},		// SYN
-	{"\x17",		"^W"},		// ETB
-	{"\x18",		"^X"},		// CAN
-	{"\x19",		"^Y"},		// EM
-	{"\x1A",		"^Z"},		// SUB
-	{"\x1B",		"^["},		// ESC Esc key.  Commented out coz it's the ANSI start byte in the above multibyte keys.  Handled in the code with a timeout.
-	{"\x1C",		"^\\"},		// FS
-	{"\x1D",		"^]"},		// GS
-	{"\x1E",		"^^"},		// RS
-	{"\x1F",		"^_"},		// US
-	{"\x7f",		"BS"},		// Backspace key, usually.  Ctrl-? perhaps?
-	{NULL, NULL}
+//  {"\x00",		"^@"},    // NUL Commented out coz it's the C string terminator, and may confuse things.
+  {"\x01",		"^A"},    // SOH
+  {"\x02",		"^B"},    // STX
+  {"\x03",		"^C"},    // ETX SIGTERM
+  {"\x04",		"^D"},    // EOT
+  {"\x05",		"^E"},    // ENQ
+  {"\x06",		"^F"},    // ACK
+  {"\x07",		"^G"},    // BEL
+  {"\x08",		"Del"},    // BS  Delete key, usually.
+  {"\x09",		"Tab"},    // HT  Tab key.
+  {"\x0A",		"Return"},  // LF  Return key.  Roxterm at least is translating both Ctrl-J and Ctrl-M into this.
+  {"\x0B",		"^K"},    // VT
+  {"\x0C",		"^L"},    // FF
+  {"\x0D",		"^M"},    // CR  Other Return key, usually.
+  {"\x0E",		"^N"},    // SO
+  {"\x0F",		"^O"},    // SI
+  {"\x10",		"^P"},    // DLE
+  {"\x11",		"^Q"},    // DC1
+  {"\x12",		"^R"},    // DC2
+  {"\x13",		"^S"},    // DC3
+  {"\x14",		"^T"},    // DC4
+  {"\x15",		"^U"},    // NAK
+  {"\x16",		"^V"},    // SYN
+  {"\x17",		"^W"},    // ETB
+  {"\x18",		"^X"},    // CAN
+  {"\x19",		"^Y"},    // EM
+  {"\x1A",		"^Z"},    // SUB
+//  {"\x1B",		"^["},    // ESC Esc key.  Commented out coz it's the ANSI start byte in the above multibyte keys.  Handled in the code with a timeout.
+  {"\x1C",		"^\\"},    // FS
+  {"\x1D",		"^]"},    // GS
+  {"\x1E",		"^^"},    // RS
+  {"\x1F",		"^_"},    // US
+  {"\x7f",		"BS"},    // Backspace key, usually.  Ctrl-? perhaps?
+  {NULL, NULL}
 };
 
 char *borderChars[][6] =
 {
-    {"-",    "|",    "+",    "+",    "+",    "+"},	// "stick" characters.
-    {"\xE2\x94\x80", "\xE2\x94\x82", "\xE2\x94\x8C", "\xE2\x94\x90", "\xE2\x94\x94", "\xE2\x94\x98"},	// UTF-8
-    {"\x71", "\x78", "\x6C", "\x6B", "\x6D", "\x6A"},	// VT100 alternate character set.
-    {"\xC4", "\xB3", "\xDA", "\xBF", "\xC0", "\xD9"}	// DOS
+  {"-",    "|",    "+",    "+",    "+",    "+"},     // "stick" characters.
+  {"\xE2\x94\x80", "\xE2\x94\x82", "\xE2\x94\x8C", "\xE2\x94\x90", "\xE2\x94\x94", "\xE2\x94\x98"},  // UTF-8
+  {"\x71", "\x78", "\x6C", "\x6B", "\x6D", "\x6A"},  // VT100 alternate character set.
+  {"\xC4", "\xB3", "\xDA", "\xBF", "\xC0", "\xD9"}   // DOS
 };
 
 char *borderCharsCurrent[][6] =
 {
-    {"=",    "#",    "+",    "+",    "+",    "+"},	// "stick" characters.
-    {"\xE2\x95\x90", "\xE2\x95\x91", "\xE2\x95\x94", "\xE2\x95\x97", "\xE2\x95\x9A", "\xE2\x95\x9D"},	// UTF-8
-    {"\x71", "\x78", "\x6C", "\x6B", "\x6D", "\x6A"},	// VT100 alternate character set has none of these.  B-(
-    {"\xCD", "\xBA", "\xC9", "\xBB", "\xC8", "\xBC"}	// DOS
+  {"=",    "#",    "+",    "+",    "+",    "+"},     // "stick" characters.
+  {"\xE2\x95\x90", "\xE2\x95\x91", "\xE2\x95\x94", "\xE2\x95\x97", "\xE2\x95\x9A", "\xE2\x95\x9D"},  // UTF-8
+  {"\x71", "\x78", "\x6C", "\x6B", "\x6D", "\x6A"},  // VT100 alternate character set has none of these.  B-(
+  {"\xCD", "\xBA", "\xC9", "\xBB", "\xC8", "\xBC"}   // DOS
 };
 
 
@@ -441,59 +441,59 @@ typedef void (*eventHandler) (view *view, event *event);
 
 struct function
 {
-	char *name;			// Name for script purposes.
-	char *description;		// Human name for the menus.
-	char type;
-	union
-	{
-		eventHandler handler;
-		char *scriptCallback;
-	};
+  char *name;		// Name for script purposes.
+  char *description;	// Human name for the menus.
+  char type;
+  union
+  {
+    eventHandler handler;
+    char *scriptCallback;
+  };
 };
 
 struct keyCommand
 {
-	char *key;			// Key name.
-	char *command;
+  char *key;		// Key name.
+  char *command;
 };
 
 struct item
 {
-	char *text;			// What's shown to humans.
-	struct key *key;		// Shortcut key while the menu is displayed.
-					// If there happens to be a key bound to the same command, the menu system should find that and show it to.
-	char type;
-	union
-	{
-		char *command;
-		struct item *items;	// An array of next level menu items.
-	};
+  char *text;		// What's shown to humans.
+  struct key *key;	// Shortcut key while the menu is displayed.
+			// If there happens to be a key bound to the same command, the menu system should find that and show it to.
+  char type;
+  union
+  {
+    char *command;
+    struct item *items;	// An array of next level menu items.
+  };
 };
 
 struct borderWidget
 {
-	char *text;
-	char *command;
+  char *text;
+  char *command;
 };
 
 // TODO - No idea if we will actually need this.
 struct _event
 {
-	struct function *function;
-	uint16_t X, Y;				// Current cursor position, or position of mouse click.
-	char type;
-	union
-	{
-		struct keyCommand *key;		// keystroke / mouse click
-		struct item *item;		// menu
-		struct borderWidget widget;	// border widget click
-		int    time;			// timer
-		struct				// scroll contents
-		{
-			int X, Y;
-		}      scroll;
-		// TODO - might need events for - leave box, enter box.  Could use a new event type "command with arguments"?
-	};
+  struct function *function;
+  uint16_t X, Y;		// Current cursor position, or position of mouse click.
+  char type;
+  union
+  {
+    struct keyCommand *key;	// keystroke / mouse click
+    struct item *item;		// menu
+    struct borderWidget widget;	// border widget click
+    int    time;		// timer
+    struct			// scroll contents
+    {
+      int X, Y;
+    }      scroll;
+    // TODO - might need events for - leave box, enter box.  Could use a new event type "command with arguments"?
+  };
 };
 
 // TODO - a generic "part of text", and what is used to define them.
@@ -502,33 +502,33 @@ struct _event
 
 struct mode
 {
-	struct keyCommand *keys;	// An array of key to command mappings.
-	struct item *items;		// An array of top level menu items.
-	struct item *functionKeys;	// An array of single level "menus".  Used to show key commands.
-	uint8_t flags;			// commandMode.
+  struct keyCommand *keys;	// An array of key to command mappings.
+  struct item *items;		// An array of top level menu items.
+  struct item *functionKeys;	// An array of single level "menus".  Used to show key commands.
+  uint8_t flags;		// commandMode.
 };
 
 /*
 Have a common menu up the top.
-    MC has a menu that changes per mode.
-    Nano has no menu.
+  MC has a menu that changes per mode.
+  Nano has no menu.
 Have a common display of certain keys down the bottom.
-    MC is one row of F1 to F10, but changes for edit / view / file browse.  But those are contexts here.
-    Nano is 12 random Ctrl keys, possibly in two lines, that changes depending on the editor mode, like editing the prompt line for various reasons, help.
+  MC is one row of F1 to F10, but changes for edit / view / file browse.  But those are contexts here.
+  Nano is 12 random Ctrl keys, possibly in two lines, that changes depending on the editor mode, like editing the prompt line for various reasons, help.
 */
-struct context				// Defines a context for content.  Text viewer, editor, file browser for instance.
+struct context			// Defines a context for content.  Text viewer, editor, file browser for instance.
 {
-	struct function *commands;	// The master list, the ones pointed to by the menus etc should be in this list.
-	struct mode *modes;		// A possible empty array of modes, indexed by the view.
-					// OR might be better to have these as a linked list, so that things like Emacs can have it's mode keymap hierarcy.
-	eventHandler handler;		// TODO - Might be better to put this in the modes.  I think vi will need that.
-					// Should set the damage list if it needs a redraw, and flags if border or status line needs updating.
-					// Keyboard / mouse events if the box did not handle them itself.
-					// DrawAll event for when drawing the box for the first time, on reveals for coming out of full screen, or user hit the redraw key.
-					// Scroll event if the content wants to handle that itself.
-					// Timer event for things like top that might want to have this called regularly.
-	boxFunction doneRedraw;		// The box is done with it's redraw, so we can free the damage list or whatever now.
-	boxFunction delete;
+  struct function *commands;	// The master list, the ones pointed to by the menus etc should be in this list.
+  struct mode *modes;		// A possible empty array of modes, indexed by the view.
+    // OR might be better to have these as a linked list, so that things like Emacs can have it's mode keymap hierarcy.
+  eventHandler handler;		// TODO - Might be better to put this in the modes.  I think vi will need that.
+    // Should set the damage list if it needs a redraw, and flags if border or status line needs updating.
+    // Keyboard / mouse events if the box did not handle them itself.
+    // DrawAll event for when drawing the box for the first time, on reveals for coming out of full screen, or user hit the redraw key.
+    // Scroll event if the content wants to handle that itself.
+    // Timer event for things like top that might want to have this called regularly.
+  boxFunction doneRedraw;	// The box is done with it's redraw, so we can free the damage list or whatever now.
+  boxFunction delete;
     // This can be used as the sub struct for various context types.  Like viewer, editor, file browser, top, etc.
     // Could even be an object hierarchy, like generic editor, which Basic vi inherits from.
     //   Or not, since the commands might be different / more of them.
@@ -538,66 +538,66 @@ struct context				// Defines a context for content.  Text viewer, editor, file b
 // Status lines can have them to.
 struct border
 {
-	struct borderWidget *topLeft;
-	struct borderWidget *topMiddle;
-	struct borderWidget *topRight;
-	struct borderWidget *bottomLeft;
-	struct borderWidget *bottomMiddle;
-	struct borderWidget *bottomRight;
-	struct borderWidget *left;
-	struct borderWidget *right;
+  struct borderWidget *topLeft;
+  struct borderWidget *topMiddle;
+  struct borderWidget *topRight;
+  struct borderWidget *bottomLeft;
+  struct borderWidget *bottomMiddle;
+  struct borderWidget *bottomRight;
+  struct borderWidget *left;
+  struct borderWidget *right;
 };
 
 struct line
 {
-	struct line *next, *prev;
-	uint32_t length;		// Careful, this is the length of the allocated memory for real lines, but the number of lines in the header node.
-	char *line;			// Should be blank for the header.
+  struct line *next, *prev;
+  uint32_t length;	// Careful, this is the length of the allocated memory for real lines, but the number of lines in the header node.
+  char *line;		// Should be blank for the header.
 };
 
 struct damage
 {
-	struct damage *next;		// A list for faster draws?
-	uint16_t X, Y, W, H;		// The rectangle to be redrawn.
-	uint16_t offset;		// Offest from the left for showing lines.
-	struct line *lines;		// Pointer to a list of text lines, or NULL.
-					// Note - likely a pointer into the middle of the line list in a content.
+  struct damage *next;	// A list for faster draws?
+  uint16_t X, Y, W, H;	// The rectangle to be redrawn.
+  uint16_t offset;	// Offest from the left for showing lines.
+  struct line *lines;	// Pointer to a list of text lines, or NULL.
+    // Note - likely a pointer into the middle of the line list in a content.
 };
 
-struct content				// For various instances of context types.  
-					// Editor / text viewer might have several files open, so one of these per file.
-					// MC might have several directories open, one of these per directory.  No idea why you might want to do this.  lol
+struct content		// For various instances of context types.  
+    // Editor / text viewer might have several files open, so one of these per file.
+    // MC might have several directories open, one of these per directory.  No idea why you might want to do this.  lol
 {
-    struct context *context;
-    char *name, *file, *path;
-    struct line lines;
+  struct context *context;
+  char *name, *file, *path;
+  struct line lines;
 //  file type
 //  double linked list of bookmarks, pointer to line, character position, length (or ending position?), type, blob for types to keep context.
-    uint16_t minW, minH, maxW, maxH;
-    uint8_t flags;			// readOnly, modified.
+  uint16_t minW, minH, maxW, maxH;
+  uint8_t flags;	// readOnly, modified.
     // This can be used as the sub struct for various content types.
 };
 
 struct _view
 {
-	struct content *content;
-	box *box;
-	struct border *border;		// Can be NULL.
-	char *statusLine;		// Text of the status line, or NULL if none.
-	int mode;			// For those contexts that can be modal.  Normally used to index the keys, menus, and key displays.
-	struct damage *damage;		// Can be NULL.  If not NULL after context->doneRedraw(), box will free it and it's children.
-					// TODO - Gotta be careful of overlapping views.
-	void *data;			// The context controls this blob, it's specific to each box.
-	uint32_t offsetX, offsetY;	// Offset within the content, coz box handles scrolling, usually.
-	uint16_t X, Y, W, H;		// Position and size of the content area within the box.  Calculated, but cached coz that might be needed for speed.
-	uint16_t cX, cY;		// Cursor position within the content.
-	uint16_t iX, oW;		// Cursor position inside the lines input text, in case the formatter makes it different, and output length.
-	char *output;			// The current line formatted for output.
-	uint8_t flags;			// redrawStatus, redrawBorder;
+  struct content *content;
+  box *box;
+  struct border *border;	// Can be NULL.
+  char *statusLine;		// Text of the status line, or NULL if none.
+  int mode;			// For those contexts that can be modal.  Normally used to index the keys, menus, and key displays.
+  struct damage *damage;	// Can be NULL.  If not NULL after context->doneRedraw(), box will free it and it's children.
+    // TODO - Gotta be careful of overlapping views.
+  void *data;			// The context controls this blob, it's specific to each box.
+  uint32_t offsetX, offsetY;	// Offset within the content, coz box handles scrolling, usually.
+  uint16_t X, Y, W, H;		// Position and size of the content area within the box.  Calculated, but cached coz that might be needed for speed.
+  uint16_t cX, cY;		// Cursor position within the content.
+  uint16_t iX, oW;		// Cursor position inside the lines input text, in case the formatter makes it different, and output length.
+  char *output;			// The current line formatted for output.
+  uint8_t flags;		// redrawStatus, redrawBorder;
 
-	// Assumption is that each box has it's own editLine (likely the line being edited), or that there's a box that is just the editLine (emacs minibuffer, and command lines for other proggies).
-	struct line *line;		// Pointer to the current line, might be the only line.
-	char *prompt;			// Optional prompt for the editLine.
+  // Assumption is that each box has it's own editLine (likely the line being edited), or that there's a box that is just the editLine (emacs minibuffer, and command lines for other proggies).
+  struct line *line;		// Pointer to the current line, might be the only line.
+  char *prompt;			// Optional prompt for the editLine.
 
 // Display mode / format hook.
 // view specific bookmarks, including highlighted block and it's type.
@@ -607,13 +607,13 @@ struct _view
 
 struct _box
 {
-	box *sub1, *sub2, *parent;
-	view *view;		// This boxes view into it's content.  For sharing contents, like a split pane editor for instance, there might be more than one box with this content, but a different view.
-				// If it's just a parent box, it wont have this, so just make it a damn pointer, that's the simplest thing.  lol
-				// TODO - Are parent boxes getting a view anyway?
-	uint16_t X, Y, W, H;	// Position and size of the box itself, not the content.  Calculated, but cached coz that might be needed for speed.
-	float split;		// Ratio of sub1's part of the split, the sub2 box gets the rest.
-	uint8_t flags;		// Various flags.
+  box *sub1, *sub2, *parent;
+  view *view;			// This boxes view into it's content.  For sharing contents, like a split pane editor for instance, there might be more than one box with this content, but a different view.
+    // If it's just a parent box, it wont have this, so just make it a damn pointer, that's the simplest thing.  lol
+    // TODO - Are parent boxes getting a view anyway?
+  uint16_t X, Y, W, H;		// Position and size of the box itself, not the content.  Calculated, but cached coz that might be needed for speed.
+  float split;			// Ratio of sub1's part of the split, the sub2 box gets the rest.
+  uint8_t flags;		// Various flags.
 };
 
 
@@ -621,8 +621,8 @@ struct _box
 void drawBox(box *box);
 
 
-#define BOX_HSPLIT	1	// Marks if it's a horizontally or vertically split.
-#define BOX_BORDER	2	// Mark if it has a border, often full screen boxes wont.
+#define BOX_HSPLIT  1	// Marks if it's a horizontally or vertically split.
+#define BOX_BORDER  2	// Mark if it has a border, often full screen boxes wont.
 
 static box *rootBox;	// Parent of the rest of the boxes, or the only box.  Always a full screen.
 static box *currentBox;
@@ -631,91 +631,91 @@ static int commandMode;
 
 void doCommand(struct function *functions, char *command, view *view, event *event)
 {
-	if (command)
-	{
-		int i;
+  if (command)
+  {
+    int i;
 
-		for (i = 0; functions[i].name; i++)
-		{
-			if (strcmp(functions[i].name, command) == 0)
-			{
-				if (functions[i].handler);
-					functions[i].handler(view, event);
-				break;
-			}
-		}
-	}
+    for (i = 0; functions[i].name; i++)
+    {
+      if (strcmp(functions[i].name, command) == 0)
+      {
+        if (functions[i].handler);
+          functions[i].handler(view, event);
+        break;
+      }
+    }
+  }
 }
 
 // Inserts the line after the given line, or at the end of content if no line.
 struct line *addLine(struct content *content, struct line *line, char *text, uint32_t length)
 {
-	struct line *result = NULL;
-	uint32_t len;
+  struct line *result = NULL;
+  uint32_t len;
 
-	if (!length)
-		length = strlen(text);
-	// Round length up.
-	len = (((length + 1) / MEM_SIZE) + 1) * MEM_SIZE;
-	result = xzalloc(sizeof(struct line));
-	result->line = xzalloc(len);
-	result->length = len;
-	strncpy(result->line, text, length);
+  if (!length)
+    length = strlen(text);
+  // Round length up.
+  len = (((length + 1) / MEM_SIZE) + 1) * MEM_SIZE;
+  result = xzalloc(sizeof(struct line));
+  result->line = xzalloc(len);
+  result->length = len;
+  strncpy(result->line, text, length);
 
-	if (content)
-	{
-		if (!line)
-			line = content->lines.prev;
+  if (content)
+  {
+    if (!line)
+      line = content->lines.prev;
 
-		result->next = line->next;
-		result->prev = line;
+    result->next = line->next;
+    result->prev = line;
 
-		line->next->prev = result;
-		line->next = result;
+    line->next->prev = result;
+    line->next = result;
 
-		content->lines.length++;
-	}
-	else
-	{
-		result->next = result;
-		result->prev = result;
-	}
+    content->lines.length++;
+  }
+  else
+  {
+    result->next = result;
+    result->prev = result;
+  }
 
-	return result;
+  return result;
 }
 
 void freeLine(struct content *content, struct line *line)
 {
-	line->next->prev = line->prev;
-	line->prev->next = line->next;
-	if (content)
-		content->lines.length--;
-	free(line->line);
-	free(line);
+  line->next->prev = line->prev;
+  line->prev->next = line->next;
+  if (content)
+    content->lines.length--;
+  free(line->line);
+  free(line);
 }
 
 void loadFile(struct content *content)
 {
-	int fd = open(content->path, O_RDONLY);
+  int fd = open(content->path, O_RDONLY);
 
-	if (-1 != fd)
-	{
-		char *temp = NULL;
-		long len;
+  if (-1 != fd)
+  {
+    char *temp = NULL;
+    long len;
 
-		do
-		{
-			// TODO - get_rawline() is slow, and wont help much with DOS and Mac line endings.
-			temp = get_rawline(fd, &len, '\n');
-			if (temp)
-			{
-				if (temp[len - 1] == '\n')
-				    temp[--len] = '\0';
-				addLine(content, NULL, temp, len);
-			}
-		} while (temp);
-		close(fd);
-	}
+    do
+    {
+      // TODO - get_rawline() is slow, and wont help much with DOS and Mac line endings.
+      temp = get_rawline(fd, &len, '\n');
+      if (temp)
+      {
+        if (temp[len - 1] == '\n')
+            temp[--len] = '\0';
+        addLine(content, NULL, temp, len);
+      }
+    } while (temp);
+    close(fd);
+  }
 }
 
 // TODO - load and save should be able to deal with pipes, and with loading only parts of files, to load more parts later.
@@ -723,45 +723,45 @@ void loadFile(struct content *content)
 void saveFile(struct content *content)
 {
 // TODO - Should do "Save as" as well.  Which is just a matter of changing content->path before calling this.
-	int fd;
+  int fd;
 
-	fd = open(content->path, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+  fd = open(content->path, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
 
-	if (-1 != fd)
-	{
-		struct line *line = content->lines.next;
+  if (-1 != fd)
+  {
+    struct line *line = content->lines.next;
 
-		while (&(content->lines) != line)	// We are at the end if we have wrapped to the beginning.
-		{
-			write(fd, line->line, strlen(line->line));
-			write(fd, "\n", 1);
-			line = line->next;
-		}
-		close(fd);
-	}
-	else
-	{
-		fprintf(stderr, "Can't open file %s\n", content->path);
-		exit(1);
-	}
+    while (&(content->lines) != line)  // We are at the end if we have wrapped to the beginning.
+    {
+      write(fd, line->line, strlen(line->line));
+      write(fd, "\n", 1);
+      line = line->next;
+    }
+    close(fd);
+  }
+  else
+  {
+    fprintf(stderr, "Can't open file %s\n", content->path);
+    exit(1);
+  }
 }
 
 struct content *addContent(char *name, struct context *context, char *filePath)
 {
-	struct content *result	= xzalloc(sizeof(struct content));
+  struct content *result  = xzalloc(sizeof(struct content));
 
-	result->lines.next	= &(result->lines);
-	result->lines.prev	= &(result->lines);
-	result->name		= strdup(name);
-	result->context		= context;
+  result->lines.next  = &(result->lines);
+  result->lines.prev  = &(result->lines);
+  result->name    = strdup(name);
+  result->context    = context;
 
-	if (filePath)
-	{
-		result->path = strdup(filePath);
-		loadFile(result);
-	}
+  if (filePath)
+  {
+    result->path = strdup(filePath);
+    loadFile(result);
+  }
 
-	return result;
+  return result;
 }
 
 // General purpose line moosher.  Used for appends, inserts, overwrites, and deletes.
@@ -774,73 +774,73 @@ void mooshLines(struct content *content, struct line *result, struct line *moosh
 // General purpose string moosher.  Used for appends, inserts, overwrites, and deletes.
 void mooshStrings(struct line *result, char *moosh, uint16_t index, uint16_t length, int insert)
 {
-	char *c, *pos;
-	int limit = strlen(result->line);
-	int mooshLen = 0, resultLen;
+  char *c, *pos;
+  int limit = strlen(result->line);
+  int mooshLen = 0, resultLen;
 
-	if (moosh)
-		mooshLen = strlen(moosh);
+  if (moosh)
+    mooshLen = strlen(moosh);
 
-	/*
-	 * moosh  == NULL	a deletion
-	 * length == 0		simple insertion
-	 * length <  mooshlen	delete some, insert moosh
-	 * length == mooshlen	exact overwrite.
-	 * length >  mooshlen	delete a lot, insert moosh
-	 */
+  /*
+   * moosh  == NULL  a deletion
+   * length == 0    simple insertion
+   * length <  mooshlen  delete some, insert moosh
+   * length == mooshlen  exact overwrite.
+   * length >  mooshlen  delete a lot, insert moosh
+   */
 
-	mooshLen -= length;
-	resultLen = limit + mooshLen;
+  mooshLen -= length;
+  resultLen = limit + mooshLen;
 
-	// If we need more space, allocate more.
-	if (resultLen > result->length)
-	{
-		result->length = resultLen + MEM_SIZE;
-		result->line = xrealloc(result->line, result->length);
-	}
+  // If we need more space, allocate more.
+  if (resultLen > result->length)
+  {
+    result->length = resultLen + MEM_SIZE;
+    result->line = xrealloc(result->line, result->length);
+  }
 
-	if (limit <= index)	// At end, just add to end.
-	{
-		// TODO - Possibly add spaces to pad out to where index is?
-		//          Would be needed for "go beyond end of line" and "column blocks".
-		//          Both of those are advanced editing.
-		index = limit;
-		insert = 1;
-	}
+  if (limit <= index)  // At end, just add to end.
+  {
+    // TODO - Possibly add spaces to pad out to where index is?
+    //          Would be needed for "go beyond end of line" and "column blocks".
+    //          Both of those are advanced editing.
+    index = limit;
+    insert = 1;
+  }
 
-	pos = &(result->line[index]);
+  pos = &(result->line[index]);
 
-	if (insert)	// Insert / delete before current character, so move it and the rest up / down mooshLen bytes.
-	{
-		if (0 < mooshLen)	// Gotta move things up.
-		{
-			c = &(result->line[limit]);
-			while (c >= pos)
-			{
-				*(c + mooshLen) = *c;
-				c--;
-			}
-		}
-		else if (0 > mooshLen)	// Gotta move things down.
-		{
-			c = pos;
-			while (*c)
-			{
-				*c = *(c - mooshLen);	// A double negative.
-				c++;
-			}
-		}
-	}
+  if (insert)  // Insert / delete before current character, so move it and the rest up / down mooshLen bytes.
+  {
+    if (0 < mooshLen)  // Gotta move things up.
+    {
+      c = &(result->line[limit]);
+      while (c >= pos)
+      {
+        *(c + mooshLen) = *c;
+        c--;
+      }
+    }
+    else if (0 > mooshLen)  // Gotta move things down.
+    {
+      c = pos;
+      while (*c)
+      {
+        *c = *(c - mooshLen);  // A double negative.
+        c++;
+      }
+    }
+  }
 
-	if (moosh)
-	{
-		c = moosh;
-		do
-		{
-			*pos++ = *c++;
-		}
-		while (*c);
-	}
+  if (moosh)
+  {
+    c = moosh;
+    do
+    {
+      *pos++ = *c++;
+    }
+    while (*c);
+  }
 }
 
 // TODO - Should draw the current border in green, the text as default (or highlight / bright).
@@ -848,83 +848,83 @@ void mooshStrings(struct line *result, char *moosh, uint16_t index, uint16_t len
 //          All other boxes with dark gray border, and dim text.
 void drawLine(int y, int start, int end, char *left, char *internal, char *contents, char *right, int current)
 {
-	int size = strlen(internal);
-	int len = (end - start) * size, x = 0;
-	char line[len + 1];
+  int size = strlen(internal);
+  int len = (end - start) * size, x = 0;
+  char line[len + 1];
 
-	if ('\0' != left[0])	// Assumes that if one side has a border, then so does the other.
-		len -= 2 * size;
+  if ('\0' != left[0])  // Assumes that if one side has a border, then so does the other.
+    len -= 2 * size;
 
-	if (contents)
-	{
-		// strncpy wont add a null at the end if the source is longer, but will pad with nulls if source is shorter.
-		// So it's best to put a safety null in first.
-		line[len] = '\0';
-		strncpy(line, contents, len);
-		// Make sure the following while loop pads out line with the internal character.
-		x = strlen(line);
-	}
-	while (x < len)
-	{
-		strcpy(&line[x], internal);
-		x += size;
-	}
-	line[x++] = '\0';
-	if ('\0' == left[0])	// Assumes that if one side has a border, then so does the other.
-	{
-		if (current)
-			printf("\x1B[1m\x1B[%d;%dH%s\x1B[m", y + 1, start + 1, line);
-		else
-			printf("\x1B[m\x1B[%d;%dH%s", y + 1, start + 1, line);
-	}
-	else
-	{
-		if (current)
-			printf("\x1B[1m\x1B[%d;%dH%s%s%s\x1B[m", y + 1, start + 1, left, line, right);
-		else
-			printf("\x1B[m\x1B[%d;%dH%s%s%s", y + 1, start + 1, left, line, right);
-	}
+  if (contents)
+  {
+    // strncpy wont add a null at the end if the source is longer, but will pad with nulls if source is shorter.
+    // So it's best to put a safety null in first.
+    line[len] = '\0';
+    strncpy(line, contents, len);
+    // Make sure the following while loop pads out line with the internal character.
+    x = strlen(line);
+  }
+  while (x < len)
+  {
+    strcpy(&line[x], internal);
+    x += size;
+  }
+  line[x++] = '\0';
+  if ('\0' == left[0])  // Assumes that if one side has a border, then so does the other.
+  {
+    if (current)
+      printf("\x1B[1m\x1B[%d;%dH%s\x1B[m", y + 1, start + 1, line);
+    else
+      printf("\x1B[m\x1B[%d;%dH%s", y + 1, start + 1, line);
+  }
+  else
+  {
+    if (current)
+      printf("\x1B[1m\x1B[%d;%dH%s%s%s\x1B[m", y + 1, start + 1, left, line, right);
+    else
+      printf("\x1B[m\x1B[%d;%dH%s%s%s", y + 1, start + 1, left, line, right);
+  }
 }
 
 void formatCheckCursor(view *view, long *cX, long *cY, char *input)
 {
-	int i = 0, o = 0, direction = (*cX) - view->cX;
+  int i = 0, o = 0, direction = (*cX) - view->cX;
 
-	// Adjust the cursor if needed, depending on the contents of the line, and the direction of travel.
-	while (input[i])
-	{
-		// When o is equal to the cX position, update the iX position to be where i is.
-		if ('\t' == input[i])
-		{
-			int j = 8 - (i % 8);
+  // Adjust the cursor if needed, depending on the contents of the line, and the direction of travel.
+  while (input[i])
+  {
+    // When o is equal to the cX position, update the iX position to be where i is.
+    if ('\t' == input[i])
+    {
+      int j = 8 - (i % 8);
 
-			// Check if the cursor is in the middle of the tab.
-			if (((*cX) > o) && ((*cX) < (o + j)))
-			{
-				if (0 <= direction)
-				{
-					*cX = (o + j);
-					view->iX = i + 1;
-				}
-				else
-				{
-					*cX = o;
-					view->iX = i;
-				}
-			}
-			o += j;
-		}
-		else
-		{
-			if ((*cX) == o)
-				view->iX = i;
-			o++;
-		}
-		i++;
-	}
-	// One more check in case the cursor is at the end of the line.
-	if ((*cX) == o)
-		view->iX = i;
+      // Check if the cursor is in the middle of the tab.
+      if (((*cX) > o) && ((*cX) < (o + j)))
+      {
+        if (0 <= direction)
+        {
+          *cX = (o + j);
+          view->iX = i + 1;
+        }
+        else
+        {
+          *cX = o;
+          view->iX = i;
+        }
+      }
+      o += j;
+    }
+    else
+    {
+      if ((*cX) == o)
+        view->iX = i;
+      o++;
+    }
+    i++;
+  }
+  // One more check in case the cursor is at the end of the line.
+  if ((*cX) == o)
+    view->iX = i;
 }
 
 // TODO - Should convert control characters to reverse video, and deal with UTF8.
@@ -1004,566 +1004,566 @@ Thanks for reporting it Roy.
 
 int formatLine(view *view, char *input, char **output)
 {
-	int len = strlen(input), i = 0, o = 0;
+  int len = strlen(input), i = 0, o = 0;
 
-	*output = xrealloc(*output, len + 1);
+  *output = xrealloc(*output, len + 1);
 
-	while (input[i])
-	{
-		if ('\t' == input[i])
-		{
-			int j = 8 - (i % 8);
+  while (input[i])
+  {
+    if ('\t' == input[i])
+    {
+      int j = 8 - (i % 8);
 
-			*output = xrealloc(*output, len + j + 1);
-			for (; j; j--)
-			{
-				(*output)[o++] = ' ';
-				len++;
-			}
-			len--;	// Not counting the actual tab character itself.
-		}
-		else
-			(*output)[o++] = input[i];
-		i++;
-	}
-	(*output)[o++] = '\0';
+      *output = xrealloc(*output, len + j + 1);
+      for (; j; j--)
+      {
+        (*output)[o++] = ' ';
+        len++;
+      }
+      len--;  // Not counting the actual tab character itself.
+    }
+    else
+      (*output)[o++] = input[i];
+    i++;
+  }
+  (*output)[o++] = '\0';
 
-	return len;
+  return len;
 }
 
 void drawContentLine(view *view, int y, int start, int end, char *left, char *internal, char *contents, char *right, int current)
 {
-	char *temp = NULL;
-	int offset = view->offsetX, len;
+  char *temp = NULL;
+  int offset = view->offsetX, len;
 
-	if (contents == view->line->line)
-	{
-		view->oW = formatLine(view, contents, &(view->output));
-		temp = view->output;
-		len = view->oW;
-	}
-	else	// Only time we are not drawing the current line, and only used for drawing the entire page.
-		len = formatLine(NULL, contents, &(temp));
+  if (contents == view->line->line)
+  {
+    view->oW = formatLine(view, contents, &(view->output));
+    temp = view->output;
+    len = view->oW;
+  }
+  else  // Only time we are not drawing the current line, and only used for drawing the entire page.
+    len = formatLine(NULL, contents, &(temp));
 
-	if (offset > len)
-		offset = len;
-	drawLine(y, start, end, left, internal, &(temp[offset]), right, current);
+  if (offset > len)
+    offset = len;
+  drawLine(y, start, end, left, internal, &(temp[offset]), right, current);
 }
 
 int moveCursorAbsolute(view *view, long cX, long cY, long sX, long sY)
 {
-	struct line *newLine = view->line;
-	long oX = view->offsetX, oY = view->offsetY;
-	long lX = view->oW, lY = view->content->lines.length - 1;
-	long nY = view->cY;
-	uint16_t w = view->W - 1, h = view->H - 1;
-	int moved = 0, updatedY = 0, endOfLine = 0;
+  struct line *newLine = view->line;
+  long oX = view->offsetX, oY = view->offsetY;
+  long lX = view->oW, lY = view->content->lines.length - 1;
+  long nY = view->cY;
+  uint16_t w = view->W - 1, h = view->H - 1;
+  int moved = 0, updatedY = 0, endOfLine = 0;
 
-	// Check if it's still within the contents.
-	if (0 > cY)		// Trying to move before the beginning of the content.
-		cY = 0;
-	else if (lY < cY)	// Trying to move beyond end of the content.
-		cY = lY;
-	if (0 > cX)		// Trying to move before the beginning of the line.
-	{
-		// See if we can move to the end of the previous line.
-		if (view->line->prev != &(view->content->lines))
-		{
-			cY--;
-			endOfLine = 1;
-		}
-		else
-			cX = 0;
-	}
-	else if (lX < cX)	// Trying to move beyond end of line.
-	{
-		// See if we can move to the begining of the next line.
-		if (view->line->next != &(view->content->lines))
-		{
-			cY++;
-			cX = 0;
-		}
-		else
-			cX = lX;
-	}
+  // Check if it's still within the contents.
+  if (0 > cY)    // Trying to move before the beginning of the content.
+    cY = 0;
+  else if (lY < cY)  // Trying to move beyond end of the content.
+    cY = lY;
+  if (0 > cX)    // Trying to move before the beginning of the line.
+  {
+    // See if we can move to the end of the previous line.
+    if (view->line->prev != &(view->content->lines))
+    {
+      cY--;
+      endOfLine = 1;
+    }
+    else
+      cX = 0;
+  }
+  else if (lX < cX)  // Trying to move beyond end of line.
+  {
+    // See if we can move to the begining of the next line.
+    if (view->line->next != &(view->content->lines))
+    {
+      cY++;
+      cX = 0;
+    }
+    else
+      cX = lX;
+  }
 
-	// Find the new line.
-	while (nY != cY)
-	{
-		updatedY = 1;
-		if (nY < cY)
-		{
-			newLine = newLine->next;
-			nY++;
-			if (view->content->lines.prev == newLine)	// We are at the end if we have wrapped to the beginning.
-				break;
-		}
-		else
-		{
-			newLine = newLine->prev;
-			nY--;
-			if (view->content->lines.next == newLine)	// We are at the end if we have wrapped to the beginning.
-				break;
-		}
-	}
-	cY = nY;
+  // Find the new line.
+  while (nY != cY)
+  {
+    updatedY = 1;
+    if (nY < cY)
+    {
+      newLine = newLine->next;
+      nY++;
+      if (view->content->lines.prev == newLine)  // We are at the end if we have wrapped to the beginning.
+        break;
+    }
+    else
+    {
+      newLine = newLine->prev;
+      nY--;
+      if (view->content->lines.next == newLine)  // We are at the end if we have wrapped to the beginning.
+        break;
+    }
+  }
+  cY = nY;
 
-	// Check if we have moved past the end of the new line.
-	if (updatedY)
-	{
-		// Format it.
-		view->oW = formatLine(view, newLine->line, &(view->output));
-		if (view->oW < cX)
-			endOfLine = 1;
-		if (endOfLine)
-			cX = view->oW;
-	}
+  // Check if we have moved past the end of the new line.
+  if (updatedY)
+  {
+    // Format it.
+    view->oW = formatLine(view, newLine->line, &(view->output));
+    if (view->oW < cX)
+      endOfLine = 1;
+    if (endOfLine)
+      cX = view->oW;
+  }
 
-	// Let the formatter decide if it wants to adjust things.
-	// It's up to the formatter to deal with things if it changes cY.
-	// On the other hand, changing cX is it's job.
-	formatCheckCursor(view, &cX, &cY, newLine->line);
+  // Let the formatter decide if it wants to adjust things.
+  // It's up to the formatter to deal with things if it changes cY.
+  // On the other hand, changing cX is it's job.
+  formatCheckCursor(view, &cX, &cY, newLine->line);
 
-	// Check the scrolling.
-	lY -= view->H - 1;
-	oX += sX;
-	oY += sY;
+  // Check the scrolling.
+  lY -= view->H - 1;
+  oX += sX;
+  oY += sY;
 
-	if (oY > cY)			// Trying to move above the box.
-		oY += cY - oY;
-	else if ((oY + h) < cY)		// Trying to move below the box
-		oY += cY - (oY + h);
-	if (oX > cX)			// Trying to move to the left of the box.
-		oX += cX - oX;
-	else if ((oX + w) <= cX)	// Trying to move to the right of the box.
-		oX += cX - (oX + w);
+  if (oY > cY)      // Trying to move above the box.
+    oY += cY - oY;
+  else if ((oY + h) < cY)    // Trying to move below the box
+    oY += cY - (oY + h);
+  if (oX > cX)      // Trying to move to the left of the box.
+    oX += cX - oX;
+  else if ((oX + w) <= cX)  // Trying to move to the right of the box.
+    oX += cX - (oX + w);
 
-	if (oY < 0)
-		oY = 0;
-	if (oY >= lY)
-		oY = lY;
-	if (oX < 0)
-		oX = 0;
-	// TODO - Should limit oX to less than the longest line, minus box width.
-	//          Gonna be a pain figuring out what the longest line is.
-	//          On the other hand, don't think that will be an actual issue unless "move past end of line" is enabled, and that's an advanced editor thing.
-	//          Though still might want to do that for the longest line on the new page to be.
+  if (oY < 0)
+    oY = 0;
+  if (oY >= lY)
+    oY = lY;
+  if (oX < 0)
+    oX = 0;
+  // TODO - Should limit oX to less than the longest line, minus box width.
+  //          Gonna be a pain figuring out what the longest line is.
+  //          On the other hand, don't think that will be an actual issue unless "move past end of line" is enabled, and that's an advanced editor thing.
+  //          Though still might want to do that for the longest line on the new page to be.
 
-	if ((view->cX != cX) || (view->cY != cY))
-		moved = 1;
+  if ((view->cX != cX) || (view->cY != cY))
+    moved = 1;
 
-	// Actually update stuff, though some have been done already.
-	view->cX = cX;
-	view->cY = cY;
-	view->line = newLine;
+  // Actually update stuff, though some have been done already.
+  view->cX = cX;
+  view->cY = cY;
+  view->line = newLine;
 
-	// Handle scrolling.
-	if ((view->offsetX != oX) || (view->offsetY != oY))
-	{
-		view->offsetX = oX;
-		view->offsetY = oY;
+  // Handle scrolling.
+  if ((view->offsetX != oX) || (view->offsetY != oY))
+  {
+    view->offsetX = oX;
+    view->offsetY = oY;
 
-		if (view->box)
-			drawBox(view->box);
-	}
+    if (view->box)
+      drawBox(view->box);
+  }
 
-	return moved;
+  return moved;
 }
 
 int moveCursorRelative(view *view, long cX, long cY, long sX, long sY)
 {
-	return moveCursorAbsolute(view, view->cX + cX, view->cY + cY, sX, sY);
+  return moveCursorAbsolute(view, view->cX + cX, view->cY + cY, sX, sY);
 }
 
 void sizeViewToBox(box *box, int X, int Y, int W, int H)
 {
-	uint16_t one = 1, two = 2;
+  uint16_t one = 1, two = 2;
 
-	if (!(box->flags & BOX_BORDER))
-	{
-	    one = 0;
-	    two = 0;
-	}
-	box->view->X = X;
-	box->view->Y = Y;
-	box->view->W = W;
-	box->view->H = H;
-	if (0 > X)  box->view->X = box->X + one;
-	if (0 > Y)  box->view->Y = box->Y + one;
-	if (0 > W)  box->view->W = box->W - two;
-	if (0 > H)  box->view->H = box->H - two;
+  if (!(box->flags & BOX_BORDER))
+  {
+      one = 0;
+      two = 0;
+  }
+  box->view->X = X;
+  box->view->Y = Y;
+  box->view->W = W;
+  box->view->H = H;
+  if (0 > X)  box->view->X = box->X + one;
+  if (0 > Y)  box->view->Y = box->Y + one;
+  if (0 > W)  box->view->W = box->W - two;
+  if (0 > H)  box->view->H = box->H - two;
 }
 
 view *addView(char *name, struct context *context, char *filePath, uint16_t X, uint16_t Y, uint16_t W, uint16_t H)
 {
-	view *result = xzalloc(sizeof(struct _view));
+  view *result = xzalloc(sizeof(struct _view));
 
-	result->X = X;
-	result->Y = Y;
-	result->W = W;
-	result->H = H;
+  result->X = X;
+  result->Y = Y;
+  result->W = W;
+  result->H = H;
 
-	result->content = addContent(name, context, filePath);
-	result->prompt = xzalloc(1);
-	// If there was content, format it's first line as usual, otherwise create an empty first line.
-	if (result->content->lines.next != &(result->content->lines))
-	{
-		result->line = result->content->lines.next;
-		result->oW = formatLine(result, result->line->line, &(result->output));
-	}
-	else
-	{
-		result->line = addLine(result->content, NULL, "\0", 0);
-		result->output = xzalloc(1);
-	}
+  result->content = addContent(name, context, filePath);
+  result->prompt = xzalloc(1);
+  // If there was content, format it's first line as usual, otherwise create an empty first line.
+  if (result->content->lines.next != &(result->content->lines))
+  {
+    result->line = result->content->lines.next;
+    result->oW = formatLine(result, result->line->line, &(result->output));
+  }
+  else
+  {
+    result->line = addLine(result->content, NULL, "\0", 0);
+    result->output = xzalloc(1);
+  }
 
-	return result;
+  return result;
 }
 
 box *addBox(char *name, struct context *context, char *filePath, uint16_t X, uint16_t Y, uint16_t W, uint16_t H)
 {
-	box *result = xzalloc(sizeof(struct _box));
+  box *result = xzalloc(sizeof(struct _box));
 
-	result->X = X;
-	result->Y = Y;
-	result->W = W;
-	result->H = H;
-	result->view = addView(name, context, filePath, X, Y, W, H);
-	result->view->box = result;
-	sizeViewToBox(result, X, Y, W, H);
+  result->X = X;
+  result->Y = Y;
+  result->W = W;
+  result->H = H;
+  result->view = addView(name, context, filePath, X, Y, W, H);
+  result->view->box = result;
+  sizeViewToBox(result, X, Y, W, H);
 
-	return result;
+  return result;
 }
 
 void freeBox(box *box)
 {
-	if (box)
-	{
-		freeBox(box->sub1);
-		freeBox(box->sub2);
-		if (box->view)
-		{
-			// In theory the line should not be part of the content if there is no content, so we should free it.
-			if (!box->view->content)
-				freeLine(NULL, box->view->line);
-			free(box->view->prompt);
-			free(box->view->output);
-			free(box->view);
-		}
-		free(box);
-	}
+  if (box)
+  {
+    freeBox(box->sub1);
+    freeBox(box->sub2);
+    if (box->view)
+    {
+      // In theory the line should not be part of the content if there is no content, so we should free it.
+      if (!box->view->content)
+        freeLine(NULL, box->view->line);
+      free(box->view->prompt);
+      free(box->view->output);
+      free(box->view);
+    }
+    free(box);
+  }
 }
 
 void drawBox(box *box)
 {
-	// This could be heavily optimized, but let's keep things simple for now.
-	// Optimized for sending less characters I mean, on slow serial links for instance.
+  // This could be heavily optimized, but let's keep things simple for now.
+  // Optimized for sending less characters I mean, on slow serial links for instance.
 
-	char **bchars = (toys.optflags & FLAG_a) ? borderChars[0] : borderChars[1];
-	char *left = "\0", *right = "\0";
-	struct line *lines = NULL;
-	int y = box->Y, current = (box == currentBox);
-	uint16_t h = box->Y + box->H;
+  char **bchars = (toys.optflags & FLAG_a) ? borderChars[0] : borderChars[1];
+  char *left = "\0", *right = "\0";
+  struct line *lines = NULL;
+  int y = box->Y, current = (box == currentBox);
+  uint16_t h = box->Y + box->H;
 
-	if (current)
-		bchars = (toys.optflags & FLAG_a) ? borderCharsCurrent[0] : borderCharsCurrent[1];
+  if (current)
+    bchars = (toys.optflags & FLAG_a) ? borderCharsCurrent[0] : borderCharsCurrent[1];
 
-	// Slow and laborious way to figure out where in the linked list of lines we start from.
-	// Wont scale well, but is simple.
-	if (box->view && box->view->content)
-	{
-		int i = box->view->offsetY;
+  // Slow and laborious way to figure out where in the linked list of lines we start from.
+  // Wont scale well, but is simple.
+  if (box->view && box->view->content)
+  {
+    int i = box->view->offsetY;
 
-		lines = &(box->view->content->lines);
-		while (i--)
-		{
-			lines = lines->next;
-			if (&(box->view->content->lines) == lines)	// We are at the end if we have wrapped to the beginning.
-				break;
-		}
-	}
+    lines = &(box->view->content->lines);
+    while (i--)
+    {
+      lines = lines->next;
+      if (&(box->view->content->lines) == lines)  // We are at the end if we have wrapped to the beginning.
+        break;
+    }
+  }
 
-	if (box->flags & BOX_BORDER)
-	{
-		h--;
-		left = right = bchars[1];
-		drawLine(y++, box->X, box->X + box->W, bchars[2], bchars[0], NULL, bchars[3], current);
-	}
+  if (box->flags & BOX_BORDER)
+  {
+    h--;
+    left = right = bchars[1];
+    drawLine(y++, box->X, box->X + box->W, bchars[2], bchars[0], NULL, bchars[3], current);
+  }
 
-	while (y < h)
-	{
-		char *line = "";
+  while (y < h)
+  {
+    char *line = "";
 
-		if (lines)
-		{
-			lines = lines->next;
-			if (&(box->view->content->lines) == lines)	// We are at the end if we have wrapped to the beginning.
-				lines = NULL;
-			else
-				line = lines->line;
-			// Figure out which line is our current line while we are here.
-			if (box->view->Y + (box->view->cY - box->view->offsetY) == y)
-				box->view->line = lines;
-		}
-		drawContentLine(box->view, y++, box->X, box->X + box->W, left, " ", line, right, current);
-	}
-	if (box->flags & BOX_BORDER)
-		drawLine(y++, box->X, box->X + box->W, bchars[4], bchars[0], NULL, bchars[5], current);
-	fflush(stdout);
+    if (lines)
+    {
+      lines = lines->next;
+      if (&(box->view->content->lines) == lines)  // We are at the end if we have wrapped to the beginning.
+        lines = NULL;
+      else
+        line = lines->line;
+      // Figure out which line is our current line while we are here.
+      if (box->view->Y + (box->view->cY - box->view->offsetY) == y)
+        box->view->line = lines;
+    }
+    drawContentLine(box->view, y++, box->X, box->X + box->W, left, " ", line, right, current);
+  }
+  if (box->flags & BOX_BORDER)
+    drawLine(y++, box->X, box->X + box->W, bchars[4], bchars[0], NULL, bchars[5], current);
+  fflush(stdout);
 }
 
 void drawBoxes(box *box)
 {
-	if (box->sub1)	// If there's one sub box, there's always two.
-	{
-		drawBoxes(box->sub1);
-		drawBoxes(box->sub2);
-	}
-	else
-		drawBox(box);
+  if (box->sub1)  // If there's one sub box, there's always two.
+  {
+    drawBoxes(box->sub1);
+    drawBoxes(box->sub2);
+  }
+  else
+    drawBox(box);
 }
 
 void calcBoxes(box *box)
 {
-	if (box->sub1)	// If there's one sub box, there's always two.
-	{
-		box->sub1->X = box->X;
-		box->sub1->Y = box->Y;
-		box->sub1->W = box->W;
-		box->sub1->H = box->H;
-		box->sub2->X = box->X;
-		box->sub2->Y = box->Y;
-		box->sub2->W = box->W;
-		box->sub2->H = box->H;
-		if (box->flags & BOX_HSPLIT)
-		{
-			box->sub1->H *= box->split;
-			box->sub2->H -= box->sub1->H;
-			box->sub2->Y += box->sub1->H;
-		}
-		else
-		{
-			box->sub1->W *= box->split;
-			box->sub2->W -= box->sub1->W;
-			box->sub2->X += box->sub1->W;
-		}
-		sizeViewToBox(box->sub1, -1, -1, -1, -1);
-		calcBoxes(box->sub1);
-		sizeViewToBox(box->sub2, -1, -1, -1, -1);
-		calcBoxes(box->sub2);
-	}
-	// Move the cursor to where it is, to check it's not now outside the box.
-	moveCursorAbsolute(box->view, box->view->cX, box->view->cY, 0, 0);
+  if (box->sub1)  // If there's one sub box, there's always two.
+  {
+    box->sub1->X = box->X;
+    box->sub1->Y = box->Y;
+    box->sub1->W = box->W;
+    box->sub1->H = box->H;
+    box->sub2->X = box->X;
+    box->sub2->Y = box->Y;
+    box->sub2->W = box->W;
+    box->sub2->H = box->H;
+    if (box->flags & BOX_HSPLIT)
+    {
+      box->sub1->H *= box->split;
+      box->sub2->H -= box->sub1->H;
+      box->sub2->Y += box->sub1->H;
+    }
+    else
+    {
+      box->sub1->W *= box->split;
+      box->sub2->W -= box->sub1->W;
+      box->sub2->X += box->sub1->W;
+    }
+    sizeViewToBox(box->sub1, -1, -1, -1, -1);
+    calcBoxes(box->sub1);
+    sizeViewToBox(box->sub2, -1, -1, -1, -1);
+    calcBoxes(box->sub2);
+  }
+  // Move the cursor to where it is, to check it's not now outside the box.
+  moveCursorAbsolute(box->view, box->view->cX, box->view->cY, 0, 0);
 
-	// We could call drawBoxes() here, but this is recursive, and so is drawBoxes().
-	// The combination might be deadly.  Drawing the content of a box might be an expensive operation.
-	// Later we might use a dirty box flag to deal with this, if it's not too much of a complication.
+  // We could call drawBoxes() here, but this is recursive, and so is drawBoxes().
+  // The combination might be deadly.  Drawing the content of a box might be an expensive operation.
+  // Later we might use a dirty box flag to deal with this, if it's not too much of a complication.
 }
 
 void deleteBox(view *view, event *event)
 {
-	box *box = view->box;
+  box *box = view->box;
 
-	if (box->parent)
-	{
-		struct _box *oldBox = box, *otherBox = box->parent->sub1;
+  if (box->parent)
+  {
+    struct _box *oldBox = box, *otherBox = box->parent->sub1;
 
-		if (otherBox == oldBox)
-			otherBox = box->parent->sub2;
-		if (currentBox->parent == box->parent)
-			currentBox = box->parent;
-		box = box->parent;
-		box->X = box->sub1->X;
-		box->Y = box->sub1->Y;
-		if (box->flags & BOX_HSPLIT)
-			box->H = box->sub1->H + box->sub2->H;
-		else
-			box->W = box->sub1->W + box->sub2->W;
-		box->flags &= ~BOX_HSPLIT;
-		// Move the other sub boxes contents up to this box.
-		box->sub1 = otherBox->sub1;
-		box->sub2 = otherBox->sub2;
-		if (box->sub1)
-		{
-		    box->sub1->parent = box;
-		    box->sub2->parent = box;
-		    box->flags = otherBox->flags;
-		    if (currentBox == box)
-			    currentBox = box->sub1;
-		}
-		else
-		{
-			if (!box->parent)
-				box->flags &= ~BOX_BORDER;
-			box->split = 1.0;
-		}
-		otherBox->sub1 = NULL;
-		otherBox->sub2 = NULL;
-		// Safe to free the boxes now that we have all their contents.
-		freeBox(otherBox);
-		freeBox(oldBox);
-	}
-	// Otherwise it must be a single full screen box.  Never delete that one, unless we are quitting.
+    if (otherBox == oldBox)
+      otherBox = box->parent->sub2;
+    if (currentBox->parent == box->parent)
+      currentBox = box->parent;
+    box = box->parent;
+    box->X = box->sub1->X;
+    box->Y = box->sub1->Y;
+    if (box->flags & BOX_HSPLIT)
+      box->H = box->sub1->H + box->sub2->H;
+    else
+      box->W = box->sub1->W + box->sub2->W;
+    box->flags &= ~BOX_HSPLIT;
+    // Move the other sub boxes contents up to this box.
+    box->sub1 = otherBox->sub1;
+    box->sub2 = otherBox->sub2;
+    if (box->sub1)
+    {
+        box->sub1->parent = box;
+        box->sub2->parent = box;
+        box->flags = otherBox->flags;
+        if (currentBox == box)
+          currentBox = box->sub1;
+    }
+    else
+    {
+      if (!box->parent)
+        box->flags &= ~BOX_BORDER;
+      box->split = 1.0;
+    }
+    otherBox->sub1 = NULL;
+    otherBox->sub2 = NULL;
+    // Safe to free the boxes now that we have all their contents.
+    freeBox(otherBox);
+    freeBox(oldBox);
+  }
+  // Otherwise it must be a single full screen box.  Never delete that one, unless we are quitting.
 
-	// Start the recursive recalculation of all the sub boxes.
-	calcBoxes(box);
-	drawBoxes(box);
+  // Start the recursive recalculation of all the sub boxes.
+  calcBoxes(box);
+  drawBoxes(box);
 }
 
 void cloneBox(struct _box *box, struct _box *sub)
 {
-	sub->parent = box;
-	// Only a full screen box has no border.
-	sub->flags |= BOX_BORDER;
-	sub->view = xmalloc(sizeof(struct _view));
-	// TODO - After this is more stable, should check if the memcpy() is simpler than - xzalloc() then copy a few things manually.
-	//          Might even be able to arrange the structure so we can memcpy just part of it, leaving the rest blank.
-	memcpy(sub->view, box->view, sizeof(struct _view));
-	sub->view->damage = NULL;
-	sub->view->data = NULL;
-	sub->view->output = NULL;
-	sub->view->box = sub;
-	if (box->view->prompt)
-		sub->view->prompt = strdup(box->view->prompt);
+  sub->parent = box;
+  // Only a full screen box has no border.
+  sub->flags |= BOX_BORDER;
+  sub->view = xmalloc(sizeof(struct _view));
+  // TODO - After this is more stable, should check if the memcpy() is simpler than - xzalloc() then copy a few things manually.
+  //          Might even be able to arrange the structure so we can memcpy just part of it, leaving the rest blank.
+  memcpy(sub->view, box->view, sizeof(struct _view));
+  sub->view->damage = NULL;
+  sub->view->data = NULL;
+  sub->view->output = NULL;
+  sub->view->box = sub;
+  if (box->view->prompt)
+    sub->view->prompt = strdup(box->view->prompt);
 }
 
 void splitBox(box *box, float split)
 {
-	uint16_t size;
-	int otherBox = 0;
+  uint16_t size;
+  int otherBox = 0;
 
-	// First some sanity checks.
-	if (0.0 > split)
-	{
-		// TODO - put this in the status line, or just silently fail.  Also, better message.  lol
-		fprintf(stderr, "User is crazy.\n");
-		return;
-	}
-	else if (1.0 <= split)	// User meant to unsplit, and it may already be split.
-	{
-		// Actually, this means that the OTHER sub box gets deleted.
-		if (box->parent)
-		{
-			if (box == box->parent->sub1)
-				deleteBox(box->parent->sub2->view, NULL);
-			else
-				deleteBox(box->parent->sub1->view, NULL);
-		}
-		return;
-	}
-	else if (0.0 < split)	// This is the normal case, so do nothing.
-	{
-	}
-	else			// User meant to delete this, zero split.
-	{
-	    deleteBox(box->view, NULL);
-	    return;
-	}
-	if (box->flags & BOX_HSPLIT)
-		size = box->H;
-	else
-		size = box->W;
-	if (6 > size)		// Is there room for 2 borders for each sub box and one character of content each?
-				// TODO - also should check the contents minimum size.
-				// No need to check the no border case, that's only for full screen.
-				// People using terminals smaller than 6 characters get what they deserve.
-	{
-		// TODO - put this in the status line, or just silently fail.
-		fprintf(stderr, "Box is too small to split.\n");
-		return;
-	}
+  // First some sanity checks.
+  if (0.0 > split)
+  {
+    // TODO - put this in the status line, or just silently fail.  Also, better message.  lol
+    fprintf(stderr, "User is crazy.\n");
+    return;
+  }
+  else if (1.0 <= split)  // User meant to unsplit, and it may already be split.
+  {
+    // Actually, this means that the OTHER sub box gets deleted.
+    if (box->parent)
+    {
+      if (box == box->parent->sub1)
+        deleteBox(box->parent->sub2->view, NULL);
+      else
+        deleteBox(box->parent->sub1->view, NULL);
+    }
+    return;
+  }
+  else if (0.0 < split)  // This is the normal case, so do nothing.
+  {
+  }
+  else      // User meant to delete this, zero split.
+  {
+      deleteBox(box->view, NULL);
+      return;
+  }
+  if (box->flags & BOX_HSPLIT)
+    size = box->H;
+  else
+    size = box->W;
+  if (6 > size)    // Is there room for 2 borders for each sub box and one character of content each?
+        // TODO - also should check the contents minimum size.
+        // No need to check the no border case, that's only for full screen.
+        // People using terminals smaller than 6 characters get what they deserve.
+  {
+    // TODO - put this in the status line, or just silently fail.
+    fprintf(stderr, "Box is too small to split.\n");
+    return;
+  }
 
-	// Note that a split box is actually three boxes.  The parent, which is not drawn, and the two subs, which are.
-	// Based on the assumption that there wont be lots of boxes, this keeps things simple.
-	// It's possible that the box has already been split, and this is called just to update the split.
-	box->split = split;
-	if (NULL == box->sub1)	// If not split already, do so.
-	{
-		box->sub1 = xzalloc(sizeof(struct _box));
-		box->sub2 = xzalloc(sizeof(struct _box));
-		cloneBox(box, box->sub1);
-		cloneBox(box, box->sub2);
-		if (box->flags & BOX_HSPLIT)
-		{
-			// Split the boxes in the middle of the content.
-			box->sub2->view->offsetY += (box->H * box->split) - 2;
-			// Figure out which sub box the cursor will be in, then update the cursor in the other box.
-			if (box->sub1->view->cY < box->sub2->view->offsetY)
-				box->sub2->view->cY = box->sub2->view->offsetY;
-			else
-			{
-				box->sub1->view->cY = box->sub2->view->offsetY - 1;
-				otherBox = 1;
-			}
-		}
-		else
-		{
-			// Split the boxes in the middle of the content.
-			box->sub2->view->offsetX += (box->W * box->split) - 2;
-			// Figure out which sub box the cursor will be in, then update the cursor in the other box.
-			if (box->sub1->view->cX < box->sub2->view->offsetX)
-				box->sub2->view->cX = box->sub2->view->offsetX;
-			else
-			{
-				box->sub1->view->cX = box->sub2->view->offsetX - 1;
-				otherBox = 1;
-			}
-		}
-	}
+  // Note that a split box is actually three boxes.  The parent, which is not drawn, and the two subs, which are.
+  // Based on the assumption that there wont be lots of boxes, this keeps things simple.
+  // It's possible that the box has already been split, and this is called just to update the split.
+  box->split = split;
+  if (NULL == box->sub1)  // If not split already, do so.
+  {
+    box->sub1 = xzalloc(sizeof(struct _box));
+    box->sub2 = xzalloc(sizeof(struct _box));
+    cloneBox(box, box->sub1);
+    cloneBox(box, box->sub2);
+    if (box->flags & BOX_HSPLIT)
+    {
+      // Split the boxes in the middle of the content.
+      box->sub2->view->offsetY += (box->H * box->split) - 2;
+      // Figure out which sub box the cursor will be in, then update the cursor in the other box.
+      if (box->sub1->view->cY < box->sub2->view->offsetY)
+        box->sub2->view->cY = box->sub2->view->offsetY;
+      else
+      {
+        box->sub1->view->cY = box->sub2->view->offsetY - 1;
+        otherBox = 1;
+      }
+    }
+    else
+    {
+      // Split the boxes in the middle of the content.
+      box->sub2->view->offsetX += (box->W * box->split) - 2;
+      // Figure out which sub box the cursor will be in, then update the cursor in the other box.
+      if (box->sub1->view->cX < box->sub2->view->offsetX)
+        box->sub2->view->cX = box->sub2->view->offsetX;
+      else
+      {
+        box->sub1->view->cX = box->sub2->view->offsetX - 1;
+        otherBox = 1;
+      }
+    }
+  }
 
-	if ((currentBox == box) && (box->sub1))
-	{
-		if (otherBox)
-			currentBox = box->sub2;
-		else
-			currentBox = box->sub1;
-	}
+  if ((currentBox == box) && (box->sub1))
+  {
+    if (otherBox)
+      currentBox = box->sub2;
+    else
+      currentBox = box->sub1;
+  }
 
-	// Start the recursive recalculation of all the sub boxes.
-	calcBoxes(box);
-	drawBoxes(box);
+  // Start the recursive recalculation of all the sub boxes.
+  calcBoxes(box);
+  drawBoxes(box);
 }
 
 // TODO - Might be better to just have a double linked list of boxes, and traverse that instead.
 //          Except that leaves a problem when deleting boxes, could end up with a blank space.
 void switchBoxes(view *view, event *event)
 {
-	box *box = view->box;
+  box *box = view->box;
 
-	// The assumption here is that box == currentBox.
-	struct _box *oldBox = currentBox;
-	struct _box *thisBox = box;
-	int backingUp = 0;
+  // The assumption here is that box == currentBox.
+  struct _box *oldBox = currentBox;
+  struct _box *thisBox = box;
+  int backingUp = 0;
 
-	// Depth first traversal.
-	while ((oldBox == currentBox) && (thisBox->parent))
-	{
-		if (thisBox == thisBox->parent->sub1)
-		{
-			if (backingUp && (thisBox->parent))
-				currentBox = thisBox->parent->sub2;
-			else if (thisBox->sub1)
-				currentBox = thisBox->sub1;
-			else
-				currentBox = thisBox->parent->sub2;
-		}
-		else if (thisBox == thisBox->parent->sub2)
-		{
-			thisBox = thisBox->parent;
-			backingUp = 1;
-		}
-	}
+  // Depth first traversal.
+  while ((oldBox == currentBox) && (thisBox->parent))
+  {
+    if (thisBox == thisBox->parent->sub1)
+    {
+      if (backingUp && (thisBox->parent))
+        currentBox = thisBox->parent->sub2;
+      else if (thisBox->sub1)
+        currentBox = thisBox->sub1;
+      else
+        currentBox = thisBox->parent->sub2;
+    }
+    else if (thisBox == thisBox->parent->sub2)
+    {
+      thisBox = thisBox->parent;
+      backingUp = 1;
+    }
+  }
 
-	// If we have not found the next box to move to, move back to the beginning.
-	if (oldBox == currentBox)
-		currentBox = rootBox;
+  // If we have not found the next box to move to, move back to the beginning.
+  if (oldBox == currentBox)
+    currentBox = rootBox;
 
-	// If we ended up on a parent box, go to it's first sub.
-	while (currentBox->sub1)
-		currentBox = currentBox->sub1;
+  // If we ended up on a parent box, go to it's first sub.
+  while (currentBox->sub1)
+    currentBox = currentBox->sub1;
 
-	// Just redraw them all.
-	drawBoxes(rootBox);
+  // Just redraw them all.
+  drawBoxes(rootBox);
 }
 
 // TODO - It might be better to do away with this bunch of single line functions
@@ -1573,157 +1573,157 @@ void switchBoxes(view *view, event *event)
 
 void halveBoxHorizontally(view *view, event *event)
 {
-	view->box->flags |= BOX_HSPLIT;
-	splitBox(view->box, 0.5);
+  view->box->flags |= BOX_HSPLIT;
+  splitBox(view->box, 0.5);
 }
 
 void halveBoxVertically(view *view, event *event)
 {
-	view->box->flags &= ~BOX_HSPLIT;
-	splitBox(view->box, 0.5);
+  view->box->flags &= ~BOX_HSPLIT;
+  splitBox(view->box, 0.5);
 }
 
 void switchMode(view *view, event *event)
 {
-	currentBox->view->mode++;
-	// Assumes that modes will always have a key mapping, which I think is a safe bet.
-	if (NULL == currentBox->view->content->context->modes[currentBox->view->mode].keys)
-		currentBox->view->mode = 0;
-	commandMode = currentBox->view->content->context->modes[currentBox->view->mode].flags & 1;
+  currentBox->view->mode++;
+  // Assumes that modes will always have a key mapping, which I think is a safe bet.
+  if (NULL == currentBox->view->content->context->modes[currentBox->view->mode].keys)
+    currentBox->view->mode = 0;
+  commandMode = currentBox->view->content->context->modes[currentBox->view->mode].flags & 1;
 }
 
 void leftChar(view *view, event *event)
 {
-	moveCursorRelative(view, -1, 0, 0, 0);
+  moveCursorRelative(view, -1, 0, 0, 0);
 }
 
 void rightChar(view *view, event *event)
 {
-	moveCursorRelative(view, 1, 0, 0, 0);
+  moveCursorRelative(view, 1, 0, 0, 0);
 }
 
 void upLine(view *view, event *event)
 {
-	moveCursorRelative(view, 0, -1, 0, 0);
+  moveCursorRelative(view, 0, -1, 0, 0);
 }
 
 void downLine(view *view, event *event)
 {
-	moveCursorRelative(view, 0, 1, 0, 0);
+  moveCursorRelative(view, 0, 1, 0, 0);
 }
 
 void upPage(view *view, event *event)
 {
-	moveCursorRelative(view, 0, 0 - (view->H - 1), 0, 0 - (view->H - 1));
+  moveCursorRelative(view, 0, 0 - (view->H - 1), 0, 0 - (view->H - 1));
 }
 
 void downPage(view *view, event *event)
 {
-	moveCursorRelative(view, 0, view->H - 1, 0, view->H - 1);
+  moveCursorRelative(view, 0, view->H - 1, 0, view->H - 1);
 }
 
 void endOfLine(view *view, event *event)
 {
-	moveCursorAbsolute(view, strlen(view->prompt) + view->oW, view->cY, 0, 0);
+  moveCursorAbsolute(view, strlen(view->prompt) + view->oW, view->cY, 0, 0);
 }
 
 void startOfLine(view *view, event *event)
 {
-	// TODO - add the advanced editing "smart home".
-	moveCursorAbsolute(view, strlen(view->prompt), view->cY, 0, 0);
+  // TODO - add the advanced editing "smart home".
+  moveCursorAbsolute(view, strlen(view->prompt), view->cY, 0, 0);
 }
 
 void splitLine(view *view, event *event)
 {
-	// TODO - should move this into mooshLines().
-	addLine(view->content, view->line, &(view->line->line[view->iX]), 0);
-	view->line->line[view->iX] = '\0';
-	moveCursorAbsolute(view, 0, view->cY + 1, 0, 0);
-	if (view->box)
-		drawBox(view->box);
+  // TODO - should move this into mooshLines().
+  addLine(view->content, view->line, &(view->line->line[view->iX]), 0);
+  view->line->line[view->iX] = '\0';
+  moveCursorAbsolute(view, 0, view->cY + 1, 0, 0);
+  if (view->box)
+    drawBox(view->box);
 }
 
 void deleteChar(view *view, event *event)
 {
-	// TODO - should move this into mooshLines().
-	// If we are at the end of the line, then join this and the next line.
-	if (view->oW == view->cX)
-	{
-		// Only if there IS a next line.
-		if (&(view->content->lines) != view->line->next)
-		{
-			mooshStrings(view->line, view->line->next->line, view->iX, 1, !TT.overWriteMode);
-			view->line->next->line = NULL;
-			freeLine(view->content, view->line->next);
-			// TODO - should check if we are on the last page, then deal with scrolling.
-			if (view->box)
-				drawBox(view->box);
-		}
-	}
-	else
-		mooshStrings(view->line, NULL, view->iX, 1, !TT.overWriteMode);
+  // TODO - should move this into mooshLines().
+  // If we are at the end of the line, then join this and the next line.
+  if (view->oW == view->cX)
+  {
+    // Only if there IS a next line.
+    if (&(view->content->lines) != view->line->next)
+    {
+      mooshStrings(view->line, view->line->next->line, view->iX, 1, !TT.overWriteMode);
+      view->line->next->line = NULL;
+      freeLine(view->content, view->line->next);
+      // TODO - should check if we are on the last page, then deal with scrolling.
+      if (view->box)
+        drawBox(view->box);
+    }
+  }
+  else
+    mooshStrings(view->line, NULL, view->iX, 1, !TT.overWriteMode);
 }
 
 void backSpaceChar(view *view, event *event)
 {
-	if (moveCursorRelative(view, -1, 0, 0, 0))
-		deleteChar(view, event);
+  if (moveCursorRelative(view, -1, 0, 0, 0))
+    deleteChar(view, event);
 }
 
 void saveContent(view *view, event *event)
 {
-	saveFile(view->content);
+  saveFile(view->content);
 }
 
 void executeLine(view *view, event *event)
 {
-	struct line *result = view->line;
+  struct line *result = view->line;
 
-	// Don't bother doing much if there's nothing on this line.
-	if (result->line[0])
-	{
-		doCommand(currentBox->view->content->context->commands, result->line, currentBox->view, event);
-		// If we are not at the end of the history contents.
-		if (&(view->content->lines) != result->next)
-		{
-			struct line *line = view->content->lines.prev;
+  // Don't bother doing much if there's nothing on this line.
+  if (result->line[0])
+  {
+    doCommand(currentBox->view->content->context->commands, result->line, currentBox->view, event);
+    // If we are not at the end of the history contents.
+    if (&(view->content->lines) != result->next)
+    {
+      struct line *line = view->content->lines.prev;
 
-			// Remove the line first.
-			result->next->prev = result->prev;
-			result->prev->next = result->next;
-			// Check if the last line is already blank, then remove it.
-			if ('\0' == line->line[0])
-			{
-				freeLine(view->content, line);
-				line = view->content->lines.prev;
-			}
-			// Then add it to the end.
-			result->next = line->next;
-			result->prev = line;
-			line->next->prev = result;
-			line->next = result;
-			view->cY = view->content->lines.length - 1;
-		}
-		moveCursorAbsolute(view, 0, view->content->lines.length, 0, 0);
-		// Make sure there is one blank line at the end.
-		if ('\0' != view->line->line[0])
-		{
-			endOfLine(view, event);
-			splitLine(view, event);
-		}
-	}
+      // Remove the line first.
+      result->next->prev = result->prev;
+      result->prev->next = result->next;
+      // Check if the last line is already blank, then remove it.
+      if ('\0' == line->line[0])
+      {
+        freeLine(view->content, line);
+        line = view->content->lines.prev;
+      }
+      // Then add it to the end.
+      result->next = line->next;
+      result->prev = line;
+      line->next->prev = result;
+      line->next = result;
+      view->cY = view->content->lines.length - 1;
+    }
+    moveCursorAbsolute(view, 0, view->content->lines.length, 0, 0);
+    // Make sure there is one blank line at the end.
+    if ('\0' != view->line->line[0])
+    {
+      endOfLine(view, event);
+      splitLine(view, event);
+    }
+  }
 
-	saveFile(view->content);
+  saveFile(view->content);
 }
 
 void quit(view *view, event *event)
 {
-	TT.stillRunning = 0;
+  TT.stillRunning = 0;
 }
 
 void nop(box *box, event *event)
 {
-	// 'tis a nop, don't actually do anything.
+  // 'tis a nop, don't actually do anything.
 }
 
 
@@ -1738,188 +1738,188 @@ void nop(box *box, event *event)
 // X, Y, W, and H can be -1, which means to grab suitable numbers from the views box.
 void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
 {
-	struct termios termio, oldtermio;
-	struct pollfd pollfds[1];
-	char buffer[BUFFER_LEN + 1];
-	char command[BUFFER_LEN + 1];
-	int pollcount = 1;
-	int i = 0;
+  struct termios termio, oldtermio;
+  struct pollfd pollfds[1];
+  char buffer[BUFFER_LEN + 1];
+  char command[BUFFER_LEN + 1];
+  int pollcount = 1;
+  int i = 0;
 // TODO - multiline editLine is an advanced feature.  Editing boxes just moves the editLine up and down.
-//	uint16_t h = 1;
+//  uint16_t h = 1;
 // TODO - should check if it's at the top of the box, then grow it down instead of up if so.
 
-	buffer[0] = 0;
-	command[0] = 0;
+  buffer[0] = 0;
+  command[0] = 0;
 
-	if (view->box)
-		sizeViewToBox(view->box, X, Y, W, H);
-	// Assumes the view was already setup if it's not part of a box.
+  if (view->box)
+    sizeViewToBox(view->box, X, Y, W, H);
+  // Assumes the view was already setup if it's not part of a box.
 
-	// All the mouse tracking methods suck one way or another.  sigh
-	// Enable mouse (VT200 normal tracking mode, UTF8 encoding).  The limit is 2015.  Seems to only be in later xterms.
-//	printf("\x1B[?1005h");
-	// Enable mouse (DEC locator reporting mode).  In theory has no limit.  Wont actually work though.
-	// On the other hand, only allows for four buttons, so only half a mouse wheel.
-//	printf("\x1B[1;2'z\x1B[1;3'{");
-	// Enable mouse (VT200 normal tracking mode).  Has a limit of 256 - 32 rows and columns.  An xterm exclusive I think, but works in roxterm at least.
-	printf("\x1B[?1000h");
-	fflush(stdout);
-	// TODO - Should remember to turn off mouse reporting when we leave.
+  // All the mouse tracking methods suck one way or another.  sigh
+  // Enable mouse (VT200 normal tracking mode, UTF8 encoding).  The limit is 2015.  Seems to only be in later xterms.
+//  printf("\x1B[?1005h");
+  // Enable mouse (DEC locator reporting mode).  In theory has no limit.  Wont actually work though.
+  // On the other hand, only allows for four buttons, so only half a mouse wheel.
+//  printf("\x1B[1;2'z\x1B[1;3'{");
+  // Enable mouse (VT200 normal tracking mode).  Has a limit of 256 - 32 rows and columns.  An xterm exclusive I think, but works in roxterm at least.
+  printf("\x1B[?1000h");
+  fflush(stdout);
+  // TODO - Should remember to turn off mouse reporting when we leave.
 
-	// Grab the old terminal settings and save it.
-	tcgetattr(0, &oldtermio);
-	tcflush(0, TCIFLUSH);
-	termio = oldtermio;
+  // Grab the old terminal settings and save it.
+  tcgetattr(0, &oldtermio);
+  tcflush(0, TCIFLUSH);
+  termio = oldtermio;
 
-	// Mould the terminal to our will.
-	termio.c_iflag &= ~(IUCLC|IXON|IXOFF|IXANY);
-	termio.c_lflag &= ~(ECHO|ECHOE|ECHOK|ECHONL|TOSTOP|ICANON);
-	termio.c_cc[VTIME]=0;	// deciseconds.
-	termio.c_cc[VMIN]=1;
-	tcsetattr(0, TCSANOW, &termio);
+  // Mould the terminal to our will.
+  termio.c_iflag &= ~(IUCLC|IXON|IXOFF|IXANY);
+  termio.c_lflag &= ~(ECHO|ECHOE|ECHOK|ECHONL|TOSTOP|ICANON);
+  termio.c_cc[VTIME]=0;  // deciseconds.
+  termio.c_cc[VMIN]=1;
+  tcsetattr(0, TCSANOW, &termio);
 
-	calcBoxes(currentBox);
-	drawBoxes(currentBox);
+  calcBoxes(currentBox);
+  drawBoxes(currentBox);
 
-	// TODO - OS buffered keys might be a problem, but we can't do the usual timestamp filter for now.
-	while (TT.stillRunning)
-	{
-		// TODO - We can reuse one or two of these to have less of them.
-		int j = 0, p, ret, y, len;
+  // TODO - OS buffered keys might be a problem, but we can't do the usual timestamp filter for now.
+  while (TT.stillRunning)
+  {
+    // TODO - We can reuse one or two of these to have less of them.
+    int j = 0, p, ret, y, len;
 
-		// Coz things might change out from under us, find the current view.
-		// TODO - see if I can get this lot out of here.
-		if (commandMode)
-			view = commandLine;
-		else
-			view = currentBox->view;
-		y = view->Y + (view->cY - view->offsetY);
-		len = strlen(view->prompt);
-		drawLine(y, view->X, view->X + view->W, "\0", " ", view->prompt, '\0', 0);
-		drawContentLine(view, y, view->X + len, view->X + view->W, "\0", " ", view->line->line, '\0', 1);
-		printf("\x1B[%d;%dH", y + 1, view->X + len + (view->cX - view->offsetX) + 1);
-		fflush(stdout);
+    // Coz things might change out from under us, find the current view.
+    // TODO - see if I can get this lot out of here.
+    if (commandMode)
+      view = commandLine;
+    else
+      view = currentBox->view;
+    y = view->Y + (view->cY - view->offsetY);
+    len = strlen(view->prompt);
+    drawLine(y, view->X, view->X + view->W, "\0", " ", view->prompt, '\0', 0);
+    drawContentLine(view, y, view->X + len, view->X + view->W, "\0", " ", view->line->line, '\0', 1);
+    printf("\x1B[%d;%dH", y + 1, view->X + len + (view->cX - view->offsetX) + 1);
+    fflush(stdout);
 
-		// Apparently it's more portable to reset this each time.
-		memset(pollfds, 0, pollcount * sizeof(struct pollfd));
-		pollfds[0].events = POLLIN;
-		pollfds[0].fd = 0;
+    // Apparently it's more portable to reset this each time.
+    memset(pollfds, 0, pollcount * sizeof(struct pollfd));
+    pollfds[0].events = POLLIN;
+    pollfds[0].fd = 0;
 
-		// TODO - Should only ask for a time out after we get an Escape.
-		p = poll(pollfds, pollcount, 100);		// Timeout of one tenth of a second (100).
-		if (0 >  p) perror_exit("poll");
-		if (0 == p)					// A timeout, trigger a time event.
-		{
-			if ((1 == i) && ('\x1B' == buffer[0]))
-			{
-				// After a short delay to check, this is a real Escape key, not part of an escape sequence, so deal with it.
-				strcpy(command, "^[");
-				i = 0;
-				buffer[0] = 0;
-			}
-			// TODO - Send a timer event somewhere.  This wont be a precise timed event, but don't think we need one.
-		}
+    // TODO - Should only ask for a time out after we get an Escape.
+    p = poll(pollfds, pollcount, 100);    // Timeout of one tenth of a second (100).
+    if (0 >  p) perror_exit("poll");
+    if (0 == p)          // A timeout, trigger a time event.
+    {
+      if ((1 == i) && ('\x1B' == buffer[0]))
+      {
+        // After a short delay to check, this is a real Escape key, not part of an escape sequence, so deal with it.
+        strcpy(command, "^[");
+        i = 0;
+        buffer[0] = 0;
+      }
+      // TODO - Send a timer event somewhere.  This wont be a precise timed event, but don't think we need one.
+    }
 
-		while (0 < p)
-		{
-			p--;
-			if (pollfds[p].revents & POLLIN)
-			{
-				// I am assuming that we get the input atomically, each multibyte key fits neatly into one read.
-				// If that's not true (which is entirely likely), then we have to get complicated with circular buffers and stuff, or just one byte at a time.
-				ret = read(pollfds[p].fd, &buffer[i], BUFFER_LEN - i);
-				if (ret < 0)			// An error happened.
-				{
-					// For now, just ignore errors.
-					fprintf(stderr, "input error on %d\n", p);
-					fflush(stderr);
-				}
-				else if (ret == 0)		// End of file.
-				{
-					fprintf(stderr, "EOF\n");
-					fflush(stderr);
-				}
-				else
-				{
-					i += ret;
-					if (BUFFER_LEN <= i)	// Ran out of buffer.
-					{
-						fprintf(stderr, "Full buffer - %s  ->  %s\n", buffer, command);
-						for (j = 0; buffer[j + 1]; j++)
-							fprintf(stderr, "(%x) %c, ", (int) buffer[j], buffer[j]);
-						fflush(stderr);
-						i = 0;
-						buffer[0] = 0;
-					}
-					else
-					    buffer[i] = 0;
-				}
-			}
-		}
+    while (0 < p)
+    {
+      p--;
+      if (pollfds[p].revents & POLLIN)
+      {
+        // I am assuming that we get the input atomically, each multibyte key fits neatly into one read.
+        // If that's not true (which is entirely likely), then we have to get complicated with circular buffers and stuff, or just one byte at a time.
+        ret = read(pollfds[p].fd, &buffer[i], BUFFER_LEN - i);
+        if (ret < 0)      // An error happened.
+        {
+          // For now, just ignore errors.
+          fprintf(stderr, "input error on %d\n", p);
+          fflush(stderr);
+        }
+        else if (ret == 0)    // End of file.
+        {
+          fprintf(stderr, "EOF\n");
+          fflush(stderr);
+        }
+        else
+        {
+          i += ret;
+          if (BUFFER_LEN <= i)  // Ran out of buffer.
+          {
+            fprintf(stderr, "Full buffer - %s  ->  %s\n", buffer, command);
+            for (j = 0; buffer[j + 1]; j++)
+              fprintf(stderr, "(%x) %c, ", (int) buffer[j], buffer[j]);
+            fflush(stderr);
+            i = 0;
+            buffer[0] = 0;
+          }
+          else
+              buffer[i] = 0;
+        }
+      }
+    }
 
 // TODO - think vi got screwed up now.  sigh
 
-		// For a real timeout checked Esc, buffer is now empty, so this for loop wont find it anyway.
-		// While it's true we could avoid it by checking, the user already had to wait for a time out, and this loop wont take THAT long.
-		for (j = 0; keys[j].code; j++)		// Search for multibyte keys and some control keys.
-		{
-			if (strcmp(keys[j].code, buffer) == 0)
-			{
-				strcat(command, keys[j].name);
-				i = 0;
-				buffer[0] = 0;
-				break;
-			}
-		}
+    // For a real timeout checked Esc, buffer is now empty, so this for loop wont find it anyway.
+    // While it's true we could avoid it by checking, the user already had to wait for a time out, and this loop wont take THAT long.
+    for (j = 0; keys[j].code; j++)    // Search for multibyte keys and some control keys.
+    {
+      if (strcmp(keys[j].code, buffer) == 0)
+      {
+        strcat(command, keys[j].name);
+        i = 0;
+        buffer[0] = 0;
+        break;
+      }
+    }
 
-		// See if it's an ordinary key,
-		if ((1 == i) && isprint(buffer[0]))
-		{
-			// If there's an outstanding command, add this to the end of it.
-			if (command[0])
-				strcat(command, buffer);
-			else
-			{
-				// TODO - Should check for tabs to, and insert them.
-				//        Though better off having a function for that?
-				// TODO - see if I can get these out of here.  Some sort of pushCharacter(buffer, blob) that is passed in.
-				mooshStrings(view->line, buffer, view->iX, 0, !TT.overWriteMode);
-				view->oW = formatLine(view, view->line->line, &(view->output));
-				moveCursorRelative(view, strlen(buffer), 0, 0, 0);
-			}
-			i = 0;
-			buffer[0] = 0;
-		}
+    // See if it's an ordinary key,
+    if ((1 == i) && isprint(buffer[0]))
+    {
+      // If there's an outstanding command, add this to the end of it.
+      if (command[0])
+        strcat(command, buffer);
+      else
+      {
+        // TODO - Should check for tabs to, and insert them.
+        //        Though better off having a function for that?
+        // TODO - see if I can get these out of here.  Some sort of pushCharacter(buffer, blob) that is passed in.
+        mooshStrings(view->line, buffer, view->iX, 0, !TT.overWriteMode);
+        view->oW = formatLine(view, view->line->line, &(view->output));
+        moveCursorRelative(view, strlen(buffer), 0, 0, 0);
+      }
+      i = 0;
+      buffer[0] = 0;
+    }
 
-		// TODO - If the view->context has on event handler, use it, otherwise look up the specific event handler in the context modes ourselves.
-		if (command[0])				// Search for a bound key.
-		{
-			if (BUFFER_LEN <= strlen(command))
-			{
-				fprintf(stderr, "Full command buffer - %s \n", command);
-				fflush(stderr);
-				command[0] = 0;
-			}
+    // TODO - If the view->context has on event handler, use it, otherwise look up the specific event handler in the context modes ourselves.
+    if (command[0])        // Search for a bound key.
+    {
+      if (BUFFER_LEN <= strlen(command))
+      {
+        fprintf(stderr, "Full command buffer - %s \n", command);
+        fflush(stderr);
+        command[0] = 0;
+      }
 
-			// This is using the currentBox instead of view, coz the command line keys are part of the box context now, not separate.
-			// More importantly, the currentBox may change due to a command.
-			struct keyCommand *ourKeys = currentBox->view->content->context->modes[currentBox->view->mode].keys;
+      // This is using the currentBox instead of view, coz the command line keys are part of the box context now, not separate.
+      // More importantly, the currentBox may change due to a command.
+      struct keyCommand *ourKeys = currentBox->view->content->context->modes[currentBox->view->mode].keys;
 
-			for (j = 0; ourKeys[j].key; j++)
-			{
-				if (strcmp(ourKeys[j].key, command) == 0)
-				{
-					doCommand(view->content->context->commands, ourKeys[j].command, view, NULL);
-					command[0] = 0;
-					break;
-				}
-			}
-		}
+      for (j = 0; ourKeys[j].key; j++)
+      {
+        if (strcmp(ourKeys[j].key, command) == 0)
+        {
+          doCommand(view->content->context->commands, ourKeys[j].command, view, NULL);
+          command[0] = 0;
+          break;
+        }
+      }
+    }
 
-	}
+  }
 
-	// Restore the old terminal settings.
-	tcsetattr(0, TCSANOW, &oldtermio);
+  // Restore the old terminal settings.
+  tcsetattr(0, TCSANOW, &oldtermio);
 }
 
 
@@ -1927,26 +1927,26 @@ void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
 // Though most of the editors have their own variation.  Maybe just use the joe one as default, it uses short names at least.
 struct function simpleEditCommands[] =
 {
-	{"backSpaceChar","Back space last character.",		0, {backSpaceChar}},
-	{"deleteBox",	"Delete a box.",			0, {deleteBox}},
-	{"deleteChar",	"Delete current character.",		0, {deleteChar}},
-	{"downLine",	"Move cursor down one line.",		0, {downLine}},
-	{"downPage",	"Move cursor down one page.",		0, {downPage}},
-	{"endOfLine",	"Go to end of line.",			0, {endOfLine}},
-	{"executeLine",	"Execute a line as a script.",		0, {executeLine}},
-	{"leftChar",	"Move cursor left one character.",	0, {leftChar}},
-	{"quit",	"Quit the application.",		0, {quit}},
-	{"rightChar",	"Move cursor right one character.",	0, {rightChar}},
-	{"save",	"Save.",				0, {saveContent}},
-	{"splitH",	"Split box in half horizontally.",	0, {halveBoxHorizontally}},
-	{"splitLine",	"Split line at cursor.",		0, {splitLine}},
-	{"splitV",	"Split box in half vertically.",	0, {halveBoxVertically}},
-	{"startOfLine",	"Go to start of line.",			0, {startOfLine}},
-	{"switchBoxes",	"Switch to another box.",		0, {switchBoxes}},
-	{"switchMode",	"Switch between command and box.",	0, {switchMode}},
-	{"upLine",	"Move cursor up one line.",		0, {upLine}},
-	{"upPage",	"Move cursor up one page.",		0, {upPage}},
-	{NULL, NULL, 0, {NULL}}
+  {"backSpaceChar",	"Back space last character.",		0, {backSpaceChar}},
+  {"deleteBox",		"Delete a box.",			0, {deleteBox}},
+  {"deleteChar",	"Delete current character.",		0, {deleteChar}},
+  {"downLine",		"Move cursor down one line.",		0, {downLine}},
+  {"downPage",		"Move cursor down one page.",		0, {downPage}},
+  {"endOfLine",		"Go to end of line.",			0, {endOfLine}},
+  {"executeLine",	"Execute a line as a script.",		0, {executeLine}},
+  {"leftChar",		"Move cursor left one character.",	0, {leftChar}},
+  {"quit",		"Quit the application.",		0, {quit}},
+  {"rightChar",		"Move cursor right one character.",	0, {rightChar}},
+  {"save",		"Save.",				0, {saveContent}},
+  {"splitH",		"Split box in half horizontally.",	0, {halveBoxHorizontally}},
+  {"splitLine",		"Split line at cursor.",		0, {splitLine}},
+  {"splitV",		"Split box in half vertically.",	0, {halveBoxVertically}},
+  {"startOfLine",	"Go to start of line.",			0, {startOfLine}},
+  {"switchBoxes",	"Switch to another box.",		0, {switchBoxes}},
+  {"switchMode",	"Switch between command and box.",	0, {switchMode}},
+  {"upLine",		"Move cursor up one line.",		0, {upLine}},
+  {"upPage",		"Move cursor up one page.",		0, {upPage}},
+  {NULL, NULL, 0, {NULL}}
 };
 
 // Construct a simple command line.
@@ -1955,18 +1955,18 @@ struct function simpleEditCommands[] =
 // TODO - Should not move off the ends of the line to the next / previous line.
 struct keyCommand simpleCommandKeys[] =
 {
-	{"BS",		"backSpaceChar"},
-	{"Del",		"deleteChar"},
-	{"Down",	"downLine"},
-	{"End",		"endOfLine"},
-	{"F10",		"quit"},
-	{"Home",	"startOfLine"},
-	{"Left",	"leftChar"},
-	{"Return",	"executeLine"},
-	{"Right",	"rightChar"},
-	{"^[",		"switchMode"},
-	{"Up",		"upLine"},
-	{NULL, NULL}
+  {"BS",	"backSpaceChar"},
+  {"Del",	"deleteChar"},
+  {"Down",	"downLine"},
+  {"End",	"endOfLine"},
+  {"F10",	"quit"},
+  {"Home",	"startOfLine"},
+  {"Left",	"leftChar"},
+  {"Return",	"executeLine"},
+  {"Right",	"rightChar"},
+  {"^[",	"switchMode"},
+  {"Up",	"upLine"},
+  {NULL, NULL}
 };
 
 
@@ -1981,98 +1981,98 @@ struct keyCommand simpleCommandKeys[] =
 // readline uses these same commands, and defaults to emacs keystrokes.
 struct function simpleEmacsCommands[] =
 {
-	{"delete-backward-char",	"Back space last character.",		0, {backSpaceChar}},
-	{"delete-window",		"Delete a box.",			0, {deleteBox}},
-	{"delete-char",			"Delete current character.",		0, {deleteChar}},
-	{"next-line",			"Move cursor down one line.",		0, {downLine}},
-	{"scroll-up",			"Move cursor down one page.",		0, {downPage}},
-	{"end-of-line",			"Go to end of line.",			0, {endOfLine}},
-	{"accept-line",			"Execute a line as a script.",		0, {executeLine}},		// From readline, which uses emacs commands, coz mg at least does not seem to have this.
-	{"backward-char",		"Move cursor left one character.",	0, {leftChar}},
-	{"save-buffers-kill-emacs",	"Quit the application.",		0, {quit}},			// Does more than just quit.
-	{"forward-char",		"Move cursor right one character.",	0, {rightChar}},
-	{"save-buffer",			"Save.",				0, {saveContent}},
-	{"split-window-horizontally",	"Split box in half horizontally.",	0, {halveBoxHorizontally}},	// TODO - Making this one up for now, mg does not have it.
-	{"newline",			"Split line at cursor.",		0, {splitLine}},
-	{"split-window-vertically",	"Split box in half vertically.",	0, {halveBoxVertically}},
-	{"beginning-of-line",		"Go to start of line.",			0, {startOfLine}},
-	{"other-window",		"Switch to another box.",		0, {switchBoxes}},		// There is also "previous-window" for going in the other direction, which we don't support yet.
-	{"execute-extended-command",	"Switch between command and box.",	0, {switchMode}},		// Actually a one time invocation of the command line.
-	{"previous-line",		"Move cursor up one line.",		0, {upLine}},
-	{"scroll-down",			"Move cursor up one page.",		0, {upPage}},
-	{NULL, NULL, 0, {NULL}}
+  {"delete-backward-char",	"Back space last character.",		0, {backSpaceChar}},
+  {"delete-window",		"Delete a box.",			0, {deleteBox}},
+  {"delete-char",		"Delete current character.",		0, {deleteChar}},
+  {"next-line",			"Move cursor down one line.",		0, {downLine}},
+  {"scroll-up",			"Move cursor down one page.",		0, {downPage}},
+  {"end-of-line",		"Go to end of line.",			0, {endOfLine}},
+  {"accept-line",		"Execute a line as a script.",		0, {executeLine}},		// From readline, which uses emacs commands, coz mg at least does not seem to have this.
+  {"backward-char",		"Move cursor left one character.",	0, {leftChar}},
+  {"save-buffers-kill-emacs",	"Quit the application.",		0, {quit}},			// Does more than just quit.
+  {"forward-char",		"Move cursor right one character.",	0, {rightChar}},
+  {"save-buffer",		"Save.",				0, {saveContent}},
+  {"split-window-horizontally",	"Split box in half horizontally.",	0, {halveBoxHorizontally}},	// TODO - Making this one up for now, mg does not have it.
+  {"newline",			"Split line at cursor.",		0, {splitLine}},
+  {"split-window-vertically",	"Split box in half vertically.",	0, {halveBoxVertically}},
+  {"beginning-of-line",		"Go to start of line.",			0, {startOfLine}},
+  {"other-window",		"Switch to another box.",		0, {switchBoxes}},		// There is also "previous-window" for going in the other direction, which we don't support yet.
+  {"execute-extended-command",	"Switch between command and box.",	0, {switchMode}},		// Actually a one time invocation of the command line.
+  {"previous-line",		"Move cursor up one line.",		0, {upLine}},
+  {"scroll-down",		"Move cursor up one page.",		0, {upPage}},
+  {NULL, NULL, 0, {NULL}}
 };
 
 // The key to command mappings.
 struct keyCommand simpleEmacsKeys[] =
 {
-	{"Del",		"delete-backward-char"},
-	{"^D",		"delete-char"},
-	{"Down",	"next-line"},
-	{"^N",		"next-line"},
-	{"End",		"end-of-line"},
-	{"^E",		"end-of-line"},
-	{"^X^C",	"save-buffers-kill-emacs"},	// Damn, Ctrl C getting eaten by default signal handling.
-	{"^Xq",		"save-buffers-kill-emacs"},	// TODO - Faking this so we can actually exit.  Remove it later.
-	{"^X^S",	"save-buffer"},
-	{"Home",	"beginning-of-line"},
-	{"^A",		"beginning-of-line"},
-	{"Left",	"backward-char"},
-	{"^B",		"backward-char"},
-	{"PgDn",	"scroll-up"},
-	{"^V",		"scroll-up"},
-	{"PgUp",	"scroll-down"},
-	{"^[v",		"scroll-down"},			// M-v
-	{"Return",	"newline"},
-	{"Right",	"forward-char"},
-	{"^F",		"forward-char"},
-	{"^[x",		"execute-extended-command"},	// M-x
-	{"^X2",		"split-window-vertically"},
-	{"^X3",		"split-window-horizontally"},	// TODO - Again, just making this up for now.
-	{"^XP",		"other-window"},
-	{"^XP",		"other-window"},
-	{"^X0",		"delete-window"},
-	{"Up",		"previous-line"},
-	{"^P",		"previous-line"},
-	{NULL, NULL}
+  {"Del",	"delete-backward-char"},
+  {"^D",	"delete-char"},
+  {"Down",	"next-line"},
+  {"^N",	"next-line"},
+  {"End",	"end-of-line"},
+  {"^E",	"end-of-line"},
+  {"^X^C",	"save-buffers-kill-emacs"},	// Damn, Ctrl C getting eaten by default signal handling.
+  {"^Xq",	"save-buffers-kill-emacs"},	// TODO - Faking this so we can actually exit.  Remove it later.
+  {"^X^S",	"save-buffer"},
+  {"Home",	"beginning-of-line"},
+  {"^A",	"beginning-of-line"},
+  {"Left",	"backward-char"},
+  {"^B",	"backward-char"},
+  {"PgDn",	"scroll-up"},
+  {"^V",	"scroll-up"},
+  {"PgUp",	"scroll-down"},
+  {"^[v",	"scroll-down"},			// M-v
+  {"Return",	"newline"},
+  {"Right",	"forward-char"},
+  {"^F",	"forward-char"},
+  {"^[x",	"execute-extended-command"},	// M-x
+  {"^X2",	"split-window-vertically"},
+  {"^X3",	"split-window-horizontally"},	// TODO - Again, just making this up for now.
+  {"^XP",	"other-window"},
+  {"^XP",	"other-window"},
+  {"^X0",	"delete-window"},
+  {"Up",	"previous-line"},
+  {"^P",	"previous-line"},
+  {NULL, NULL}
 };
 
 struct keyCommand simpleEmacsCommandKeys[] =
 {
-	{"Del",		"delete-backwards-char"},
-	{"^D",		"delete-char"},
-	{"^D",		"delete-char"},
-	{"Down",	"next-line"},
-	{"^N",		"next-line"},
-	{"End",		"end-of-line"},
-	{"^E",		"end-of-line"},
-	{"Home",	"beginning-of-line"},
-	{"^A",		"beginning-of-line"},
-	{"Left",	"backward-char"},
-	{"^B",		"backward-char"},
-	{"Up",		"previous-line"},
-	{"^P",		"previous-line"},
-	{"Return",	"accept-line"},
-	{"^[x",		"execute-extended-command"},
-	{NULL, NULL}
+  {"Del",	"delete-backwards-char"},
+  {"^D",	"delete-char"},
+  {"^D",	"delete-char"},
+  {"Down",	"next-line"},
+  {"^N",	"next-line"},
+  {"End",	"end-of-line"},
+  {"^E",	"end-of-line"},
+  {"Home",	"beginning-of-line"},
+  {"^A",	"beginning-of-line"},
+  {"Left",	"backward-char"},
+  {"^B",	"backward-char"},
+  {"Up",	"previous-line"},
+  {"^P",	"previous-line"},
+  {"Return",	"accept-line"},
+  {"^[x",	"execute-extended-command"},
+  {NULL, NULL}
 };
 
 // An array of various modes.
 struct mode simpleEmacsMode[] =
 {
-    {simpleEmacsKeys, NULL, NULL, 0},
-    {simpleEmacsCommandKeys, NULL, NULL, 1},
-    {NULL, NULL, NULL}
+  {simpleEmacsKeys, NULL, NULL, 0},
+  {simpleEmacsCommandKeys, NULL, NULL, 1},
+  {NULL, NULL, NULL}
 };
 
 // Put it all together into a simple editor context.
 struct context simpleEmacs =
 {
-    simpleEmacsCommands,
-    simpleEmacsMode,
-    NULL,
-    NULL,
-    NULL
+  simpleEmacsCommands,
+  simpleEmacsMode,
+  NULL,
+  NULL,
+  NULL
 };
 
 
@@ -2087,95 +2087,95 @@ struct context simpleEmacs =
 // TODO - Some of these might be wrong.  Just going by the inadequate joe docs for now.
 struct function simpleJoeCommands[] =
 {
-	{"backs",	"Back space last character.",		0, {backSpaceChar}},
-	{"abort",	"Delete a box.",			0, {deleteBox}},
-	{"delch",	"Delete current character.",		0, {deleteChar}},
-	{"dnarw",	"Move cursor down one line.",		0, {downLine}},
-	{"pgdn",	"Move cursor down one page.",		0, {downPage}},
-	{"eol",		"Go to end of line.",			0, {endOfLine}},
-	{"ltarw",	"Move cursor left one character.",	0, {leftChar}},
-	{"killjoe",	"Quit the application.",		0, {quit}},
-	{"rtarw",	"Move cursor right one character.",	0, {rightChar}},
-	{"save",	"Save.",				0, {saveContent}},
-	{"splitw",	"Split box in half horizontally.",	0, {halveBoxHorizontally}},
-	{"open",	"Split line at cursor.",		0, {splitLine}},
-	{"bol",		"Go to start of line.",			0, {startOfLine}},
-	{"home",	"Go to start of line.",			0, {startOfLine}},
-	{"nextw",	"Switch to another box.",		0, {switchBoxes}},	// This is "next window", there's also "previous window" which we don't support yet.
-	{"execmd",	"Switch between command and box.",	0, {switchMode}},	// Actually I think this just switches to the command mode, not back and forth.  Or it might execute the actual command.
-	{"uparw",	"Move cursor up one line.",		0, {upLine}},
-	{"pgup",	"Move cursor up one page.",		0, {upPage}},
+  {"backs",	"Back space last character.",		0, {backSpaceChar}},
+  {"abort",	"Delete a box.",			0, {deleteBox}},
+  {"delch",	"Delete current character.",		0, {deleteChar}},
+  {"dnarw",	"Move cursor down one line.",		0, {downLine}},
+  {"pgdn",	"Move cursor down one page.",		0, {downPage}},
+  {"eol",	"Go to end of line.",			0, {endOfLine}},
+  {"ltarw",	"Move cursor left one character.",	0, {leftChar}},
+  {"killjoe",	"Quit the application.",		0, {quit}},
+  {"rtarw",	"Move cursor right one character.",	0, {rightChar}},
+  {"save",	"Save.",				0, {saveContent}},
+  {"splitw",	"Split box in half horizontally.",	0, {halveBoxHorizontally}},
+  {"open",	"Split line at cursor.",		0, {splitLine}},
+  {"bol",	"Go to start of line.",			0, {startOfLine}},
+  {"home",	"Go to start of line.",			0, {startOfLine}},
+  {"nextw",	"Switch to another box.",		0, {switchBoxes}},	// This is "next window", there's also "previous window" which we don't support yet.
+  {"execmd",	"Switch between command and box.",	0, {switchMode}},	// Actually I think this just switches to the command mode, not back and forth.  Or it might execute the actual command.
+  {"uparw",	"Move cursor up one line.",		0, {upLine}},
+  {"pgup",	"Move cursor up one page.",		0, {upPage}},
 
-	// Not an actual joe command.
-	{"executeLine",	"Execute a line as a script.",		0, {executeLine}},	// Perhaps this should be execmd?
-	{NULL, NULL, 0, {NULL}}
+  // Not an actual joe command.
+  {"executeLine",	"Execute a line as a script.",	0, {executeLine}},	// Perhaps this should be execmd?
+  {NULL, NULL, 0, {NULL}}
 };
 
 struct keyCommand simpleJoeKeys[] =
 {
-	{"BS",		"backs"},
-	{"^D",		"delch"},
-	{"Down",	"dnarw"},
-	{"^N",		"dnarw"},
-	{"^E",		"eol"},
-//	{"F10",		"killjoe"},	// "deleteBox" should do this if it's the last window.
-	{"^Kd",		"save"},
-	{"^K^D"		"save"},
-	{"^A",		"bol"},
-	{"Left",	"ltarw"},
-	{"^B",		"ltarw"},
-	{"^V",		"pgdn"},	// Actually half a page.
-	{"^U",		"pgup"},	// Actually half a page.
-	{"Return",	"open"},
-	{"Right",	"rtarw"},
-	{"^F",		"rtarw"},
-	{"^[x",		"execmd"},
-	{"^[^X",	"execmd"},
-	{"^Ko",		"splitw"},
-	{"^K^O",	"splitw"},
-	{"^Kn",		"nextw"},
-	{"^K^N",	"nextw"},
-	{"^Kx",		"abort"},	// Should ask if it should save if it's been modified.  A good generic thing to do anyway.
-	{"^K^X",	"abort"},
-	{"Up",		"uparw"},
-	{"^P",		"uparw"},
-	{NULL, NULL}
+  {"BS",	"backs"},
+  {"^D",	"delch"},
+  {"Down",	"dnarw"},
+  {"^N",	"dnarw"},
+  {"^E",	"eol"},
+//  {"F10",	"killjoe"},	// "deleteBox" should do this if it's the last window.
+  {"^Kd",	"save"},
+  {"^K^D"	"save"},
+  {"^A",	"bol"},
+  {"Left",	"ltarw"},
+  {"^B",	"ltarw"},
+  {"^V",	"pgdn"},	// Actually half a page.
+  {"^U",	"pgup"},	// Actually half a page.
+  {"Return",	"open"},
+  {"Right",	"rtarw"},
+  {"^F",	"rtarw"},
+  {"^[x",	"execmd"},
+  {"^[^X",	"execmd"},
+  {"^Ko",	"splitw"},
+  {"^K^O",	"splitw"},
+  {"^Kn",	"nextw"},
+  {"^K^N",	"nextw"},
+  {"^Kx",	"abort"},	// Should ask if it should save if it's been modified.  A good generic thing to do anyway.
+  {"^K^X",	"abort"},
+  {"Up",	"uparw"},
+  {"^P",	"uparw"},
+  {NULL, NULL}
 };
 
 struct keyCommand simpleJoeCommandKeys[] =
 {
-	{"BS",		"backs"},
-	{"^D",		"delch"},
-	{"Down",	"dnarw"},
-	{"^N",		"dnarw"},
-	{"^E",		"eol"},
-	{"^A",		"bol"},
-	{"Left",	"ltarw"},
-	{"^B",		"ltarw"},
-	{"Right",	"rtarw"},
-	{"^F",		"rtarw"},
-	{"^[x",		"execmd"},
-	{"^[^X",	"execmd"},
-	{"Up",		"uparw"},
-	{"^P",		"uparw"},
-	{"Return",	"executeLine"},
-	{NULL, NULL}
+  {"BS",	"backs"},
+  {"^D",	"delch"},
+  {"Down",	"dnarw"},
+  {"^N",	"dnarw"},
+  {"^E",	"eol"},
+  {"^A",	"bol"},
+  {"Left",	"ltarw"},
+  {"^B",	"ltarw"},
+  {"Right",	"rtarw"},
+  {"^F",	"rtarw"},
+  {"^[x",	"execmd"},
+  {"^[^X",	"execmd"},
+  {"Up",	"uparw"},
+  {"^P",	"uparw"},
+  {"Return",	"executeLine"},
+  {NULL, NULL}
 };
 
 struct mode simpleJoeMode[] =
 {
-    {simpleJoeKeys, NULL, NULL, 0},
-    {simpleJoeCommandKeys, NULL, NULL, 1},
-    {NULL, NULL, NULL, 0}
+  {simpleJoeKeys, NULL, NULL, 0},
+  {simpleJoeCommandKeys, NULL, NULL, 1},
+  {NULL, NULL, NULL, 0}
 };
 
 struct context simpleJoe =
 {
-    simpleJoeCommands,
-    simpleJoeMode,
-    NULL,
-    NULL,
-    NULL
+  simpleJoeCommands,
+  simpleJoeMode,
+  NULL,
+  NULL,
+  NULL
 };
 
 
@@ -2187,73 +2187,73 @@ struct context simpleJoe =
 
 struct keyCommand simpleLessKeys[] =
 {
-	{"Down",	"downLine"},
-	{"j",		"downLine"},
-	{"Return",	"downLine"},
-	{"End",		"endOfLine"},
-	{"q",		"quit"},
-	{":q",		"quit"},
-	{"ZZ",		"quit"},
-	{"PgDn",	"downPage"},
-	{"f",		"downPage"},
-	{" ",		"downPage"},
-	{"^F",		"downPage"},
-	{"Left",	"leftChar"},
-	{"Right",	"rightChar"},
-	{"PgUp",	"upPage"},
-	{"b",		"upPage"},
-	{"^B",		"upPage"},
-	{"Up",		"upLine"},
-	{"k",		"upLine"},
-	{NULL, NULL}
+  {"Down",	"downLine"},
+  {"j",		"downLine"},
+  {"Return",	"downLine"},
+  {"End",	"endOfLine"},
+  {"q",		"quit"},
+  {":q",	"quit"},
+  {"ZZ",	"quit"},
+  {"PgDn",	"downPage"},
+  {"f",		"downPage"},
+  {" ",		"downPage"},
+  {"^F",	"downPage"},
+  {"Left",	"leftChar"},
+  {"Right",	"rightChar"},
+  {"PgUp",	"upPage"},
+  {"b",		"upPage"},
+  {"^B",	"upPage"},
+  {"Up",	"upLine"},
+  {"k",		"upLine"},
+  {NULL, NULL}
 };
 
 struct mode simpleLessMode[] =
 {
-    {simpleLessKeys, NULL, NULL, 0},
-    {simpleCommandKeys, NULL, NULL, 1},
-    {NULL, NULL, NULL}
+  {simpleLessKeys, NULL, NULL, 0},
+  {simpleCommandKeys, NULL, NULL, 1},
+  {NULL, NULL, NULL}
 };
 
 struct context simpleLess =
 {
-    simpleEditCommands,
-    simpleLessMode,
-    NULL,
-    NULL,
-    NULL
+  simpleEditCommands,
+  simpleLessMode,
+  NULL,
+  NULL,
+  NULL
 };
 
 struct keyCommand simpleMoreKeys[] =
 {
-	{"j",		"downLine"},
-	{"Return",	"downLine"},
-	{"q",		"quit"},
-	{":q",		"quit"},
-	{"ZZ",		"quit"},
-	{"f",		"downPage"},
-	{" ",		"downPage"},
-	{"^F",		"downPage"},
-	{"b",		"upPage"},
-	{"^B",		"upPage"},
-	{"k",		"upLine"},
-	{NULL, NULL}
+  {"j",		"downLine"},
+  {"Return",	"downLine"},
+  {"q",		"quit"},
+  {":q",	"quit"},
+  {"ZZ",	"quit"},
+  {"f",		"downPage"},
+  {" ",		"downPage"},
+  {"^F",	"downPage"},
+  {"b",		"upPage"},
+  {"^B",	"upPage"},
+  {"k",		"upLine"},
+  {NULL, NULL}
 };
 
 struct mode simpleMoreMode[] =
 {
-    {simpleMoreKeys, NULL, NULL, 0},
-    {simpleCommandKeys, NULL, NULL, 1},
-    {NULL, NULL, NULL}
+  {simpleMoreKeys, NULL, NULL, 0},
+  {simpleCommandKeys, NULL, NULL, 1},
+  {NULL, NULL, NULL}
 };
 
 struct context simpleMore =
 {
-    simpleEditCommands,
-    simpleMoreMode,
-    NULL,
-    NULL,
-    NULL
+  simpleEditCommands,
+  simpleMoreMode,
+  NULL,
+  NULL,
+  NULL
 };
 
 
@@ -2261,45 +2261,45 @@ struct context simpleMore =
 
 struct keyCommand simpleMceditKeys[] =
 {
-	{"BS",		"backSpaceChar"},
-	{"Del",		"deleteChar"},
-	{"Down",	"downLine"},
-	{"End",		"endOfLine"},
-	{"F10",		"quit"},
-	{"^[0",		"quit"},
-	{"F2",		"save"},
-	{"^[2",		"save"},
-	{"Home",	"startOfLine"},
-	{"Left",	"leftChar"},
-	{"PgDn",	"downPage"},
-	{"PgUp",	"upPage"},
-	{"Return",	"splitLine"},
-	{"Right",	"rightChar"},
-	{"Shift F2",	"switchMode"},
-	{"^[x",		"switchMode"},	// Emacs like.
-	{"^[:",		"switchMode"},	// Sorta vi like.
-	{"^O|",		"splitV"},	// MC doesn't have a split window concept, so make these up to match tmux more or less.
-	{"^O-",		"splitH"},
-	{"^Oo",		"switchBoxes"},
-	{"^Ox",		"deleteBox"},
-	{"Up",		"upLine"},
-	{NULL, NULL}
+  {"BS",	"backSpaceChar"},
+  {"Del",	"deleteChar"},
+  {"Down",	"downLine"},
+  {"End",	"endOfLine"},
+  {"F10",	"quit"},
+  {"^[0",	"quit"},
+  {"F2",	"save"},
+  {"^[2",	"save"},
+  {"Home",	"startOfLine"},
+  {"Left",	"leftChar"},
+  {"PgDn",	"downPage"},
+  {"PgUp",	"upPage"},
+  {"Return",	"splitLine"},
+  {"Right",	"rightChar"},
+  {"Shift F2",	"switchMode"},	// MC doesn't have a command mode.
+  {"^[x",	"switchMode"},	// Emacs like.
+  {"^[:",	"switchMode"},	// Sorta vi like.
+  {"^O|",	"splitV"},	// MC doesn't have a split window concept, so make these up to match tmux more or less.
+  {"^O-",	"splitH"},
+  {"^Oo",	"switchBoxes"},
+  {"^Ox",	"deleteBox"},
+  {"Up",	"upLine"},
+  {NULL, NULL}
 };
 
 struct mode simpleMceditMode[] =
 {
-    {simpleMceditKeys, NULL, NULL, 0},
-    {simpleCommandKeys, NULL, NULL, 1},
-    {NULL, NULL, NULL}
+  {simpleMceditKeys, NULL, NULL, 0},
+  {simpleCommandKeys, NULL, NULL, 1},
+  {NULL, NULL, NULL}
 };
 
 struct context simpleMcedit =
 {
-    simpleEditCommands,
-    simpleMceditMode,
-    NULL,
-    NULL,
-    NULL
+  simpleEditCommands,
+  simpleMceditMode,
+  NULL,
+  NULL,
+  NULL
 };
 
 
@@ -2310,20 +2310,20 @@ struct context simpleMcedit =
 
 struct function simpleNanoCommands[] =
 {
-	{"backSpaceChar","Back space last character.",		0, {backSpaceChar}},
-	{"delete",	"Delete current character.",		0, {deleteChar}},
-	{"down",	"Move cursor down one line.",		0, {downLine}},
-	{"downPage",	"Move cursor down one page.",		0, {downPage}},
-	{"end",		"Go to end of line.",			0, {endOfLine}},
-	{"left",	"Move cursor left one character.",	0, {leftChar}},
-	{"exit",	"Quit the application.",		0, {quit}},
-	{"right",	"Move cursor right one character.",	0, {rightChar}},
-	{"writeout",	"Save.",				0, {saveContent}},
-	{"enter",	"Split line at cursor.",		0, {splitLine}},
-	{"home",	"Go to start of line.",			0, {startOfLine}},
-	{"up",		"Move cursor up one line.",		0, {upLine}},
-	{"upPage",	"Move cursor up one page.",		0, {upPage}},
-	{NULL, NULL, 0, {NULL}}
+  {"backSpaceChar",	"Back space last character.",		0, {backSpaceChar}},
+  {"delete",		"Delete current character.",		0, {deleteChar}},
+  {"down",		"Move cursor down one line.",		0, {downLine}},
+  {"downPage",		"Move cursor down one page.",		0, {downPage}},
+  {"end",		"Go to end of line.",			0, {endOfLine}},
+  {"left",		"Move cursor left one character.",	0, {leftChar}},
+  {"exit",		"Quit the application.",		0, {quit}},
+  {"right",		"Move cursor right one character.",	0, {rightChar}},
+  {"writeout",		"Save.",				0, {saveContent}},
+  {"enter",		"Split line at cursor.",		0, {splitLine}},
+  {"home",		"Go to start of line.",			0, {startOfLine}},
+  {"up",		"Move cursor up one line.",		0, {upLine}},
+  {"upPage",		"Move cursor up one page.",		0, {upPage}},
+  {NULL, NULL, 0, {NULL}}
 };
 
 
@@ -2331,51 +2331,52 @@ struct function simpleNanoCommands[] =
 struct keyCommand simpleNanoKeys[] =
 {
 // TODO - Delete key is ^H dammit.  Find the alternate Esc sequence for Del.
-//	{"^H",		"backSpaceChar"},	// ?
-	{"BS",		"backSpaceChar"},
-	{"^D",		"delete"},
-	{"Del",		"delete"},
-	{"^N",		"down"},
-	{"Down",	"down"},
-	{"^E",		"end"},
-	{"End",		"end"},
-	{"^X",		"exit"},
-	{"F2",		"quit"},
-	{"^O",		"writeout"},
-	{"F3",		"writeout"},
-	{"^A",		"home"},
-	{"Home",	"home"},
-	{"^B",		"left"},
-	{"Left",	"left"},
-	{"^V",		"downPage"},		// ?
-	{"PgDn",	"downPage"},
-	{"^Y",		"upPage"},		// ?
-	{"PgUp",	"upPage"},
-	{"Return",	"enter"},		// TODO - Not sure if this is correct.
-	{"^F",		"right"},
-	{"Right",	"right"},
-	{"^P",		"up"},
-	{"Up",		"up"},
-	{NULL, NULL}
+//  {"^H",	"backSpaceChar"},	// ?
+  {"BS",	"backSpaceChar"},
+  {"^D",	"delete"},
+  {"Del",	"delete"},
+  {"^N",	"down"},
+  {"Down",	"down"},
+  {"^E",	"end"},
+  {"End",	"end"},
+  {"^X",	"exit"},
+  {"F2",	"quit"},
+  {"^O",	"writeout"},
+  {"F3",	"writeout"},
+  {"^A",	"home"},
+  {"Home",	"home"},
+  {"^B",	"left"},
+  {"Left",	"left"},
+  {"^V",	"downPage"},	// ?
+  {"PgDn",	"downPage"},
+  {"^Y",	"upPage"},	// ?
+  {"PgUp",	"upPage"},
+  {"Return",	"enter"},	// TODO - Not sure if this is correct.
+  {"^F",	"right"},
+  {"Right",	"right"},
+  {"^P",	"up"},
+  {"Up",	"up"},
+  {NULL, NULL}
 };
 
 struct mode simpleNanoMode[] =
 {
-    {simpleNanoKeys, NULL, NULL, 0},
-    {NULL, NULL, NULL}
+  {simpleNanoKeys, NULL, NULL, 0},
+  {NULL, NULL, NULL}
 };
 
 struct context simpleNano =
 {
-    simpleNanoCommands,
-    simpleNanoMode,
-    NULL,
-    NULL,
-    NULL
+  simpleNanoCommands,
+  simpleNanoMode,
+  NULL,
+  NULL,
+  NULL
 };
 
 
 // Construct a simple vi editor.
+// Only vi is not so sibple.  lol
 // The "command line" modes are /, ?, :, and !,
 //   / is regex search.
 //   ? is regex search backwards.
@@ -2405,148 +2406,148 @@ static int viTempExMode;
 
 void viMode(view *view, event *event)
 {
-	currentBox->view->mode = 0;
-	commandMode = 0;
-	viTempExMode = 0;
+  currentBox->view->mode = 0;
+  commandMode = 0;
+  viTempExMode = 0;
 }
 
 void viInsertMode(view *view, event *event)
 {
-	currentBox->view->mode = 1;
-	commandMode = 0;
+  currentBox->view->mode = 1;
+  commandMode = 0;
 }
 
 void viExMode(view *view, event *event)
 {
-	currentBox->view->mode = 2;
-	commandMode = 1;
-	// TODO - Should change this based on the event, : or Q.
-	viTempExMode = 1;
-	commandLine->prompt = xrealloc(commandLine->prompt, 2);
-	strcpy(commandLine->prompt, ":");
+  currentBox->view->mode = 2;
+  commandMode = 1;
+  // TODO - Should change this based on the event, : or Q.
+  viTempExMode = 1;
+  commandLine->prompt = xrealloc(commandLine->prompt, 2);
+  strcpy(commandLine->prompt, ":");
 }
 
 void viBackSpaceChar(view *view, event *event)
 {
-	if ((2 == currentBox->view->mode) && (0 == view->cX) && viTempExMode)
-		viMode(view, event);
-	else
-		backSpaceChar(view, event);
+  if ((2 == currentBox->view->mode) && (0 == view->cX) && viTempExMode)
+    viMode(view, event);
+  else
+    backSpaceChar(view, event);
 }
 
 void viStartOfNextLine(view *view, event *event)
 {
-	startOfLine(view, event);
-	downLine(view, event);
+  startOfLine(view, event);
+  downLine(view, event);
 }
 
 // TODO - ex uses "shortest unique string" to match commands, should implement that, and do it for the other contexts to.
 struct function simpleViCommands[] =
 {
-	// These are actual ex commands.
-	{"insert",	"Switch to insert mode.",		0, {viInsertMode}},
-	{"quit",	"Quit the application.",		0, {quit}},
-	{"visual",	"Switch to visual mode.",		0, {viMode}},
-	{"write",	"Save.",				0, {saveContent}},
+  // These are actual ex commands.
+  {"insert",		"Switch to insert mode.",		0, {viInsertMode}},
+  {"quit",		"Quit the application.",		0, {quit}},
+  {"visual",		"Switch to visual mode.",		0, {viMode}},
+  {"write",		"Save.",				0, {saveContent}},
 
-	// These are not ex commands.
-	{"backSpaceChar","Back space last character.",		0, {viBackSpaceChar}},
-	{"deleteBox",	"Delete a box.",			0, {deleteBox}},
-	{"deleteChar",	"Delete current character.",		0, {deleteChar}},
-	{"downLine",	"Move cursor down one line.",		0, {downLine}},
-	{"downPage",	"Move cursor down one page.",		0, {downPage}},
-	{"endOfLine",	"Go to end of line.",			0, {endOfLine}},
-	{"executeLine",	"Execute a line as a script.",		0, {executeLine}},
-	{"exMode",	"Switch to ex mode.",			0, {viExMode}},
-	{"leftChar",	"Move cursor left one character.",	0, {leftChar}},
-	{"rightChar",	"Move cursor right one character.",	0, {rightChar}},
-	{"splitH",	"Split box in half horizontally.",	0, {halveBoxHorizontally}},
-	{"splitLine",	"Split line at cursor.",		0, {splitLine}},
-	{"splitV",	"Split box in half vertically.",	0, {halveBoxVertically}},
-	{"startOfLine",	"Go to start of line.",			0, {startOfLine}},
-	{"startOfNLine","Go to start of next line.",		0, {viStartOfNextLine}},
-	{"switchBoxes",	"Switch to another box.",		0, {switchBoxes}},
-	{"upLine",	"Move cursor up one line.",		0, {upLine}},
-	{"upPage",	"Move cursor up one page.",		0, {upPage}},
-	{NULL, NULL, 0, {NULL}}
+  // These are not ex commands.
+  {"backSpaceChar",	"Back space last character.",		0, {viBackSpaceChar}},
+  {"deleteBox",		"Delete a box.",			0, {deleteBox}},
+  {"deleteChar",	"Delete current character.",		0, {deleteChar}},
+  {"downLine",		"Move cursor down one line.",		0, {downLine}},
+  {"downPage",		"Move cursor down one page.",		0, {downPage}},
+  {"endOfLine",		"Go to end of line.",			0, {endOfLine}},
+  {"executeLine",	"Execute a line as a script.",		0, {executeLine}},
+  {"exMode",		"Switch to ex mode.",			0, {viExMode}},
+  {"leftChar",		"Move cursor left one character.",	0, {leftChar}},
+  {"rightChar",		"Move cursor right one character.",	0, {rightChar}},
+  {"splitH",		"Split box in half horizontally.",	0, {halveBoxHorizontally}},
+  {"splitLine",		"Split line at cursor.",		0, {splitLine}},
+  {"splitV",		"Split box in half vertically.",	0, {halveBoxVertically}},
+  {"startOfLine",	"Go to start of line.",			0, {startOfLine}},
+  {"startOfNLine",	"Go to start of next line.",		0, {viStartOfNextLine}},
+  {"switchBoxes",	"Switch to another box.",		0, {switchBoxes}},
+  {"upLine",		"Move cursor up one line.",		0, {upLine}},
+  {"upPage",		"Move cursor up one page.",		0, {upPage}},
+  {NULL, NULL, 0, {NULL}}
 };
 
 struct keyCommand simpleViNormalKeys[] =
 {
-	{"BS",		"leftChar"},
-	{"X",		"backSpaceChar"},
-	{"Del",		"deleteChar"},
-	{"x",		"deleteChar"},
-	{"Down",	"downLine"},
-	{"j",		"downLine"},
-	{"End",		"endOfLine"},
-	{"Home",	"startOfLine"},
-	{"Left",	"leftChar"},
-	{"h",		"leftChar"},
-	{"PgDn",	"downPage"},
-	{"^F",		"downPage"},
-	{"PgUp",	"upPage"},
-	{"^B",		"upPage"},
-	{"Return",	"startOfNextLine"},
-	{"Right",	"rightChar"},
-	{"l",		"rightChar"},
-	{"i",		"insert"},
-	{":",		"exMode"},	// This is the temporary ex mode that you can backspace out of.  Or any command backs you out.
-	{"Q",		"exMode"},	// This is the ex mode you need to do the "visual" command to get out of.
-	{"^Wv",		"splitV"},
-	{"^W^V",	"splitV"},
-	{"^Ws",		"splitH"},
-	{"^WS",		"splitH"},
-	{"^W^S",	"splitH"},
-	{"^Ww",		"switchBoxes"},
-	{"^W^W",	"switchBoxes"},
-	{"^Wq",		"deleteBox"},
-	{"^W^Q",	"deleteBox"},
-	{"Up",		"upLine"},
-	{"k",		"upLine"},
-	{NULL, NULL}
+  {"BS",	"leftChar"},
+  {"X",		"backSpaceChar"},
+  {"Del",	"deleteChar"},
+  {"x",		"deleteChar"},
+  {"Down",	"downLine"},
+  {"j",		"downLine"},
+  {"End",	"endOfLine"},
+  {"Home",	"startOfLine"},
+  {"Left",	"leftChar"},
+  {"h",		"leftChar"},
+  {"PgDn",	"downPage"},
+  {"^F",	"downPage"},
+  {"PgUp",	"upPage"},
+  {"^B",	"upPage"},
+  {"Return",	"startOfNextLine"},
+  {"Right",	"rightChar"},
+  {"l",		"rightChar"},
+  {"i",		"insert"},
+  {":",		"exMode"},	// This is the temporary ex mode that you can backspace out of.  Or any command backs you out.
+  {"Q",		"exMode"},	// This is the ex mode you need to do the "visual" command to get out of.
+  {"^Wv",	"splitV"},
+  {"^W^V",	"splitV"},
+  {"^Ws",	"splitH"},
+  {"^WS",	"splitH"},
+  {"^W^S",	"splitH"},
+  {"^Ww",	"switchBoxes"},
+  {"^W^W",	"switchBoxes"},
+  {"^Wq",	"deleteBox"},
+  {"^W^Q",	"deleteBox"},
+  {"Up",	"upLine"},
+  {"k",		"upLine"},
+  {NULL, NULL}
 };
 
 struct keyCommand simpleViInsertKeys[] =
 {
-	{"BS",		"backSpaceChar"},
-	{"Del",		"deleteChar"},
-	{"Return",	"splitLine"},
-	{"^[",		"visual"},
-	{"^C",		"visual"},	// TODO - Ctrl-C is filtered by the default signal handling, which we might want to disable.
-	{NULL, NULL}
+  {"BS",	"backSpaceChar"},
+  {"Del",	"deleteChar"},
+  {"Return",	"splitLine"},
+  {"^[",	"visual"},
+  {"^C",	"visual"},	// TODO - Ctrl-C is filtered by the default signal handling, which we might want to disable.
+  {NULL, NULL}
 };
 
 struct keyCommand simpleExKeys[] =
 {
-	{"BS",		"backSpaceChar"},
-	{"Del",		"deleteChar"},
-	{"Down",	"downLine"},
-	{"End",		"endOfLine"},
-	{"Home",	"startOfLine"},
-	{"Left",	"leftChar"},
-	{"Return",	"executeLine"},
-	{"Right",	"rightChar"},
-	{"^[",		"visual"},
-	{"Up",		"upLine"},
-	{NULL, NULL}
+  {"BS",	"backSpaceChar"},
+  {"Del",	"deleteChar"},
+  {"Down",	"downLine"},
+  {"End",	"endOfLine"},
+  {"Home",	"startOfLine"},
+  {"Left",	"leftChar"},
+  {"Return",	"executeLine"},
+  {"Right",	"rightChar"},
+  {"^[",	"visual"},
+  {"Up",	"upLine"},
+  {NULL, NULL}
 };
 
 struct mode simpleViMode[] =
 {
-    {simpleViNormalKeys, NULL, NULL, 0},
-    {simpleViInsertKeys, NULL, NULL, 0},
-    {simpleExKeys, NULL, NULL, 1},
-    {NULL, NULL, NULL}
+  {simpleViNormalKeys, NULL, NULL, 0},
+  {simpleViInsertKeys, NULL, NULL, 0},
+  {simpleExKeys, NULL, NULL, 1},
+  {NULL, NULL, NULL}
 };
 
 struct context simpleVi =
 {
-    simpleViCommands,
-    simpleViMode,
-    NULL,
-    NULL,
-    NULL
+  simpleViCommands,
+  simpleViMode,
+  NULL,
+  NULL,
+  NULL
 };
 
 
@@ -2560,59 +2561,59 @@ struct context simpleVi =
 
 void boxes_main(void)
 {
-	struct context *context = &simpleMcedit;	// The default is mcedit, coz that's what I use.
-	char *prompt = "Enter a command : ";
-	unsigned W = 80, H = 24;
+  struct context *context = &simpleMcedit;  // The default is mcedit, coz that's what I use.
+  char *prompt = "Enter a command : ";
+  unsigned W = 80, H = 24;
 
-	// TODO - Should do an isatty() here, though not sure about the usefullness of driving this from a script or redirected input, since it's supposed to be a UI for terminals.
-	//          It would STILL need the terminal size for output though.  Perhaps just bitch and abort if it's not a tty?
-	//          On the other hand, sed don't need no stinkin' UI.  And things like more or less should be usable on the end of a pipe.
+  // TODO - Should do an isatty() here, though not sure about the usefullness of driving this from a script or redirected input, since it's supposed to be a UI for terminals.
+  //          It would STILL need the terminal size for output though.  Perhaps just bitch and abort if it's not a tty?
+  //          On the other hand, sed don't need no stinkin' UI.  And things like more or less should be usable on the end of a pipe.
 
-	// TODO - set up a handler for SIGWINCH to find out when the terminal has been resized.
-	terminal_size(&W, &H);
-	if (toys.optflags & FLAG_w)
-		W = TT.w;
-	if (toys.optflags & FLAG_h)
-		H = TT.h;
+  // TODO - set up a handler for SIGWINCH to find out when the terminal has been resized.
+  terminal_size(&W, &H);
+  if (toys.optflags & FLAG_w)
+    W = TT.w;
+  if (toys.optflags & FLAG_h)
+    H = TT.h;
 
-	TT.stillRunning = 1;
+  TT.stillRunning = 1;
 
-	// For testing purposes, figure out which context we use.  When this gets real, the toybox multiplexer will sort this out for us instead.
-	if (toys.optflags & FLAG_m)
-	{
-		if (strcmp(TT.mode, "emacs") == 0)
-			context = &simpleEmacs;
-		else if (strcmp(TT.mode, "joe") == 0)
-			context = &simpleJoe;
-		else if (strcmp(TT.mode, "less") == 0)
-			context = &simpleLess;
-		else if (strcmp(TT.mode, "mcedit") == 0)
-			context = &simpleMcedit;
-		else if (strcmp(TT.mode, "more") == 0)
-			context = &simpleMore;
-		else if (strcmp(TT.mode, "nano") == 0)
-			context = &simpleNano;
-		else if (strcmp(TT.mode, "vi") == 0)
-			context = &simpleVi;
-	}
+  // For testing purposes, figure out which context we use.  When this gets real, the toybox multiplexer will sort this out for us instead.
+  if (toys.optflags & FLAG_m)
+  {
+    if (strcmp(TT.mode, "emacs") == 0)
+      context = &simpleEmacs;
+    else if (strcmp(TT.mode, "joe") == 0)
+      context = &simpleJoe;
+    else if (strcmp(TT.mode, "less") == 0)
+      context = &simpleLess;
+    else if (strcmp(TT.mode, "mcedit") == 0)
+      context = &simpleMcedit;
+    else if (strcmp(TT.mode, "more") == 0)
+      context = &simpleMore;
+    else if (strcmp(TT.mode, "nano") == 0)
+      context = &simpleNano;
+    else if (strcmp(TT.mode, "vi") == 0)
+      context = &simpleVi;
+  }
 
-	// Create the main box.  Right now the system needs one for wrapping around while switching.  The H - 1 bit is to leave room for our example command line.
-	rootBox = addBox("root", context, toys.optargs[0], 0, 0, W, H - 1);
+  // Create the main box.  Right now the system needs one for wrapping around while switching.  The H - 1 bit is to leave room for our example command line.
+  rootBox = addBox("root", context, toys.optargs[0], 0, 0, W, H - 1);
 
-	// Create the command line view, sharing the same context as the root.  It will differentiate based on the view mode of the current box.
-	// Also load the command line history as it's file.
-	// TODO - different contexts will have different history files, though what to do about ones with no history, and ones with different histories for different modes?
-	commandLine = addView("command", rootBox->view->content->context, ".boxes.history", 0, H, W, 1);
-	// Add a prompt to it.
-	commandLine->prompt = xrealloc(commandLine->prompt, strlen(prompt) + 1);
-	strcpy(commandLine->prompt, prompt);
-	// Move to the end of the history.
-	moveCursorAbsolute(commandLine, 0, commandLine->content->lines.length, 0, 0);
+  // Create the command line view, sharing the same context as the root.  It will differentiate based on the view mode of the current box.
+  // Also load the command line history as it's file.
+  // TODO - different contexts will have different history files, though what to do about ones with no history, and ones with different histories for different modes?
+  commandLine = addView("command", rootBox->view->content->context, ".boxes.history", 0, H, W, 1);
+  // Add a prompt to it.
+  commandLine->prompt = xrealloc(commandLine->prompt, strlen(prompt) + 1);
+  strcpy(commandLine->prompt, prompt);
+  // Move to the end of the history.
+  moveCursorAbsolute(commandLine, 0, commandLine->content->lines.length, 0, 0);
 
-	// Run the main loop.
-	currentBox = rootBox;
-	editLine(currentBox->view, -1, -1, -1, -1);
+  // Run the main loop.
+  currentBox = rootBox;
+  editLine(currentBox->view, -1, -1, -1, -1);
 
-	puts("\n");
-	fflush(stdout);
+  puts("\n");
+  fflush(stdout);
 }
