@@ -49,7 +49,6 @@ GLOBALS(
 #define FLAG_h  8
 #define FLAG_w  16
 
-#define MEM_SIZE  128
 
 /* This is trying to be a generic text editing, text viewing, and terminal
  * handling system.  The current code is a work in progress, and the design
@@ -423,6 +422,15 @@ struct key keys[] =
   {"\x1B\x39",		"F9"},
   {"\x1B\x30",		"F10"},
 
+/* TODO - Rob says -
+...you don't need a NULL terminator for  
+an array, you can do sizeof(table)/sizeof(*table). Divide the size of  
+the table (in bytes) by the size of a member of the table (in bytes) to  
+get the number of entries.
+
+I should try that trick.
+*/
+
   {NULL, NULL}
 };
 
@@ -464,8 +472,7 @@ struct function
 
 struct keyCommand
 {
-  char *key;		// Key name.
-  char *command;
+  char *key, *command;
 };
 
 struct item
@@ -483,8 +490,7 @@ struct item
 
 struct borderWidget
 {
-  char *text;
-  char *command;
+  char *text, *command;
 };
 
 // TODO - No idea if we will actually need this.
@@ -549,14 +555,9 @@ struct context			// Defines a context for content.  Text viewer, editor, file br
 // Status lines can have them to.
 struct border
 {
-  struct borderWidget *topLeft;
-  struct borderWidget *topMiddle;
-  struct borderWidget *topRight;
-  struct borderWidget *bottomLeft;
-  struct borderWidget *bottomMiddle;
-  struct borderWidget *bottomRight;
-  struct borderWidget *left;
-  struct borderWidget *right;
+  struct borderWidget *topLeft, *topMiddle, *topRight;
+  struct borderWidget *bottomLeft, *bottomMiddle, *bottomRight;
+  struct borderWidget *left, *right;
 };
 
 struct line
@@ -657,6 +658,8 @@ void doCommand(struct function *functions, char *command, view *view, event *eve
     }
   }
 }
+
+#define MEM_SIZE  128	// Chunk size for line memory allocation.
 
 // Inserts the line after the given line, or at the end of content if no line.
 struct line *addLine(struct content *content, struct line *line, char *text, uint32_t length)
@@ -1738,9 +1741,6 @@ void nop(box *box, event *event)
 }
 
 
-
-#define BUFFER_LEN 16
-
 // Basically this is the main loop.
 
 // X and Y are screen coords.
@@ -1751,10 +1751,10 @@ void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
 {
   struct termios termio, oldtermio;
   struct pollfd pollfds[1];
-  char buffer[BUFFER_LEN + 1];
-  char command[BUFFER_LEN + 1];
+  char buffer[20];
+  char command[20];
   int pollcount = 1;
-  int i = 0;
+  int index = 0;
 // TODO - multiline editLine is an advanced feature.  Editing boxes just moves the editLine up and down.
 //  uint16_t h = 1;
 // TODO - should check if it's at the top of the box, then grow it down instead of up if so.
@@ -1800,10 +1800,8 @@ void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
 
     // Coz things might change out from under us, find the current view.
     // TODO - see if I can get this lot out of here.
-    if (commandMode)
-      view = commandLine;
-    else
-      view = currentBox->view;
+    if (commandMode)	view = commandLine;
+    else		view = currentBox->view;
     y = view->Y + (view->cY - view->offsetY);
     len = strlen(view->prompt);
     drawLine(y, view->X, view->X + view->W, "\0", " ", view->prompt, '\0', 0);
@@ -1821,11 +1819,11 @@ void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
     if (0 >  p)  perror_exit("poll");
     if (0 == p)          // A timeout, trigger a time event.
     {
-      if ((1 == i) && ('\x1B' == buffer[0]))
+      if ((1 == index) && ('\x1B' == buffer[0]))
       {
         // After a short delay to check, this is a real Escape key, not part of an escape sequence, so deal with it.
         strcpy(command, "^[");
-        i = 0;
+        index = 0;
         buffer[0] = 0;
       }
       // TODO - Send a timer event somewhere.  This wont be a precise timed event, but don't think we need one.
@@ -1838,7 +1836,7 @@ void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
       {
         // I am assuming that we get the input atomically, each multibyte key fits neatly into one read.
         // If that's not true (which is entirely likely), then we have to get complicated with circular buffers and stuff, or just one byte at a time.
-        ret = read(pollfds[p].fd, &buffer[i], BUFFER_LEN - i);
+        ret = read(pollfds[p].fd, &buffer[index], sizeof(buffer) - (index + 1));
         if (ret < 0)      // An error happened.
         {
           // For now, just ignore errors.
@@ -1852,18 +1850,17 @@ void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
         }
         else
         {
-          i += ret;
-          if (BUFFER_LEN <= i)  // Ran out of buffer.
+          index += ret;
+          if (sizeof(buffer) < (index + 1))  // Ran out of buffer.
           {
             fprintf(stderr, "Full buffer - %s  ->  %s\n", buffer, command);
             for (j = 0; buffer[j + 1]; j++)
               fprintf(stderr, "(%x) %c, ", (int) buffer[j], buffer[j]);
             fflush(stderr);
-            i = 0;
+            index = 0;
             buffer[0] = 0;
           }
-          else
-              buffer[i] = 0;
+          else  buffer[index] = 0;
         }
       }
     }
@@ -1877,14 +1874,14 @@ void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
       if (strcmp(keys[j].code, buffer) == 0)
       {
         strcat(command, keys[j].name);
-        i = 0;
+        index = 0;
         buffer[0] = 0;
         break;
       }
     }
 
     // See if it's an ordinary key,
-    if ((1 == i) && isprint(buffer[0]))
+    if ((1 == index) && isprint(buffer[0]))
     {
       // If there's an outstanding command, add this to the end of it.
       if (command[0])
@@ -1898,14 +1895,14 @@ void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
         view->oW = formatLine(view, view->line->line, &(view->output));
         moveCursorRelative(view, strlen(buffer), 0, 0, 0);
       }
-      i = 0;
+      index = 0;
       buffer[0] = 0;
     }
 
     // TODO - If the view->context has an event handler, use it, otherwise look up the specific event handler in the context modes ourselves.
     if (command[0])        // Search for a bound key.
     {
-      if (BUFFER_LEN <= strlen(command))
+      if (sizeof(command) < (strlen(command) + 1))
       {
         fprintf(stderr, "Full command buffer - %s \n", command);
         fflush(stderr);
