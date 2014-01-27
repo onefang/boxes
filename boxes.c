@@ -2055,7 +2055,7 @@ struct context simpleJoe =
 // '/' and '?' for search command mode.  I think they both have some ex commands with the usual : command mode starter.
 // No cursor movement, just scrolling.
 // TODO - Put content into read only mode.
-// TODO - actually implement read only mode where up and down one line do actualy scrolling.
+// TODO - actually implement read only mode where up and down one line do actual scrolling instead of cursor movement.
 
 struct keyCommand simpleLessKeys[] =
 {
