@@ -1902,7 +1902,7 @@ void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
       buffer[0] = 0;
     }
 
-    // TODO - If the view->context has on event handler, use it, otherwise look up the specific event handler in the context modes ourselves.
+    // TODO - If the view->context has an event handler, use it, otherwise look up the specific event handler in the context modes ourselves.
     if (command[0])        // Search for a bound key.
     {
       if (BUFFER_LEN <= strlen(command))
@@ -2090,7 +2090,7 @@ struct context simpleEmacs =
 // Construct a simple joe / wordstar editor, using joe is the reference, seems to be the popular Unix variant.
 // Esc x starts up the command line.
 // Has multi control key combos.  Mostly Ctrl-K, Ctrl-[ (Esc), (Ctrl-B, Ctrl-Q in wordstar and delphi), but might be others.
-//   Can't find a single list of comand mappings for joe, gotta search all over.  sigh
+//   Can't find a single list of command mappings for joe, gotta search all over.  sigh
 //   Even the command line keystroke I stumbled on (Esc x) is not documented.
 //   Note that you don't have to let go of the Ctrl key for the second keystroke, but you can.
 
@@ -2387,7 +2387,7 @@ struct context simpleNano =
 
 
 // Construct a simple vi editor.
-// Only vi is not so sibple.  lol
+// Only vi is not so simple.  lol
 // The "command line" modes are /, ?, :, and !,
 //   / is regex search.
 //   ? is regex search backwards.
