@@ -2289,7 +2289,9 @@ struct keyCommand simpleMceditKeys[] =
   {"^Q|",	"splitV"},	// MC doesn't have a split window concept, so make these up to match tmux more or less.
   {"^Q-",	"splitH"},
   {"^Qo",	"switchBoxes"},
+  {"^Q^O",	"switchBoxes"},
   {"^Qx",	"deleteBox"},
+  {"^Q^X",	"deleteBox"},
   {"Up",	"upLine"},
   {NULL, NULL}
 };
