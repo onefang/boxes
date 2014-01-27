@@ -1798,6 +1798,10 @@ void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
     // TODO - We can reuse one or two of these to have less of them.
     int j = 0, p, ret, y, len;
 
+    // This is using the currentBox instead of view, coz the command line keys are part of the box context now, not separate.
+    // More importantly, the currentBox may change due to a command.
+    struct keyCommand *ourKeys = currentBox->view->content->context->modes[currentBox->view->mode].keys;
+
     // Coz things might change out from under us, find the current view.
     // TODO - see if I can get this lot out of here.
     if (commandMode)	view = commandLine;
@@ -1813,6 +1817,8 @@ void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
     memset(pollfds, 0, pollcount * sizeof(struct pollfd));
     pollfds[0].events = POLLIN;
     pollfds[0].fd = 0;
+
+// TODO - A bit unstable at the moment, something makes it go into a horrid CPU eating edit line flicker mode sometimes.  And / or vi mode can crash on exit (stack smash).
 
     // TODO - Should only ask for a time out after we get an Escape.
     p = poll(pollfds, pollcount, 100);    // Timeout of one tenth of a second (100).
@@ -1865,8 +1871,6 @@ void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
       }
     }
 
-// TODO - think vi got screwed up now.  sigh
-
     // For a real timeout checked Esc, buffer is now empty, so this for loop wont find it anyway.
     // While it's true we could avoid it by checking, the user already had to wait for a time out, and this loop wont take THAT long.
     for (j = 0; keys[j].code; j++)    // Search for multibyte keys and some control keys.
@@ -1883,17 +1887,36 @@ void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
     // See if it's an ordinary key,
     if ((1 == index) && isprint(buffer[0]))
     {
-      // If there's an outstanding command, add this to the end of it.
-      if (command[0])
-        strcat(command, buffer);
-      else
+      int visucks = 0;
+
+      // Here we want to pass it to the command finder first, and only "insert" it if it's not a command.
+      // Less and more have the "ZZ" command, but nothing else seems to have multi ordinary character commands.
+      // Less and more also have some ordinary character commands, mostly vi like.
+      for (j = 0; ourKeys[j].key; j++)
       {
-        // TODO - Should check for tabs to, and insert them.
-        //        Though better off having a function for that?
-        // TODO - see if I can get these out of here.  Some sort of pushCharacter(buffer, blob) that is passed in.
-        mooshStrings(view->line, buffer, view->iX, 0, !TT.overWriteMode);
-        view->oW = formatLine(view, view->line->line, &(view->output));
-        moveCursorRelative(view, strlen(buffer), 0, 0, 0);
+        // Yes, that's right, we are scanning ourKeys twice, coz vi.
+        // TODO - We can wriggle out of this later by bumping visucks up a scope and storing a pointer to ourKeys[j].command.
+        //          In fact, visucks could be that pointer.
+        if (strcmp(ourKeys[j].key, buffer) == 0)
+        {
+          strcpy(command, buffer);
+          visucks = 1;
+          break;
+        }
+      }
+      // If there's an outstanding command, add this to the end of it.
+      if (!visucks)
+      {
+        if (command[0])  strcat(command, buffer);
+        else
+        {
+          // TODO - Should check for tabs to, and insert them.
+          //        Though better off having a function for that?
+          // TODO - see if I can get these out of here.  Some sort of pushCharacter(buffer, blob) that is passed in.
+          mooshStrings(view->line, buffer, view->iX, 0, !TT.overWriteMode);
+          view->oW = formatLine(view, view->line->line, &(view->output));
+          moveCursorRelative(view, strlen(buffer), 0, 0, 0);
+        }
       }
       index = 0;
       buffer[0] = 0;
@@ -1908,10 +1931,6 @@ void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
         fflush(stderr);
         command[0] = 0;
       }
-
-      // This is using the currentBox instead of view, coz the command line keys are part of the box context now, not separate.
-      // More importantly, the currentBox may change due to a command.
-      struct keyCommand *ourKeys = currentBox->view->content->context->modes[currentBox->view->mode].keys;
 
       for (j = 0; ourKeys[j].key; j++)
       {
