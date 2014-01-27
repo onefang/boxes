@@ -472,7 +472,7 @@ struct item
 {
   char *text;		// What's shown to humans.
   struct key *key;	// Shortcut key while the menu is displayed.
-			// If there happens to be a key bound to the same command, the menu system should find that and show it to.
+    // If there happens to be a key bound to the same command, the menu system should find that and show it to.
   char type;
   union
   {
@@ -502,7 +502,7 @@ struct _event
     struct			// scroll contents
     {
       int X, Y;
-    }      scroll;
+    } scroll;
     // TODO - might need events for - leave box, enter box.  Could use a new event type "command with arguments"?
   };
 };
@@ -1818,7 +1818,7 @@ void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
 
     // TODO - Should only ask for a time out after we get an Escape.
     p = poll(pollfds, pollcount, 100);    // Timeout of one tenth of a second (100).
-    if (0 >  p) perror_exit("poll");
+    if (0 >  p)  perror_exit("poll");
     if (0 == p)          // A timeout, trigger a time event.
     {
       if ((1 == i) && ('\x1B' == buffer[0]))
