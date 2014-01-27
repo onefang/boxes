@@ -35,9 +35,8 @@ config BOXES
 */
 
 #include "toys.h"
-#include "toynet.h"
 
-DEFINE_GLOBALS(
+GLOBALS(
 	char *mode;
 	long h, w;
 	// TODO - actually, these should be globals in the library, and leave this buffer alone.
