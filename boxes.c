@@ -296,19 +296,52 @@ struct key
 };
 
 // This table includes some variations I have found on some terminals, and the MC "Esc digit" versions.
-// NOTE - The MC Esc variations might not be such a good idea, other programs want the Esc key for other things.
-//          Notably seems that "Esc somekey" is used in place of "Alt somekey" AKA "Meta somekey" coz apparently some OSes swallow those.
-//            Conversely, some terminals send "Esc somekey" when you do "Alt somekey".
-//          Those MC Esc variants might be used on Macs for other things?
 // TODO - Don't think I got all the linux console variations.
-// TODO - tmux messes with the shift function keys somehow.
 // TODO - Add more shift variations, plus Ctrl & Alt variations.
+// TODO - tmux messes with the shift function keys somehow.
 // TODO - Add other miscelany that does not use an escape sequence.  Including mouse events.
-// TODO - Perhaps sort this for quicker searching, OR to say which terminal is which, though there is some overlap.
-//          On the other hand, simple wins out over speed, and sorting by terminal type wins the simple test.
-//          Plus, human typing speeds wont need binary searching speeds on this small table.
+
+// This is sorted to say which terminal is which, though there is some overlap.
+// Human typing speeds wont need binary searching speeds on this small table.
+// So simple wins out over speed, and sorting by terminal type wins the simple test.
 struct key keys[] =
 {
+  // Control characters.
+//  {"\x00",		"^@"},		// NUL Commented out coz it's the C string terminator, and may confuse things.
+  {"\x01",		"^A"},		// SOH
+  {"\x02",		"^B"},		// STX
+  {"\x03",		"^C"},		// ETX SIGTERM
+  {"\x04",		"^D"},		// EOT
+  {"\x05",		"^E"},		// ENQ
+  {"\x06",		"^F"},		// ACK
+  {"\x07",		"^G"},		// BEL
+  {"\x08",		"Del"},		// BS  Delete key, usually.
+  {"\x09",		"Tab"},		// HT  Tab key.
+  {"\x0A",		"Return"},	// LF  Return key.  Roxterm at least is translating both Ctrl-J and Ctrl-M into this.
+  {"\x0B",		"^K"},		// VT
+  {"\x0C",		"^L"},		// FF
+  {"\x0D",		"^M"},		// CR  Other Return key, usually.
+  {"\x0E",		"^N"},		// SO
+  {"\x0F",		"^O"},		// SI
+  {"\x10",		"^P"},		// DLE
+  {"\x11",		"^Q"},		// DC1
+  {"\x12",		"^R"},		// DC2
+  {"\x13",		"^S"},		// DC3
+  {"\x14",		"^T"},		// DC4
+  {"\x15",		"^U"},		// NAK
+  {"\x16",		"^V"},		// SYN
+  {"\x17",		"^W"},		// ETB
+  {"\x18",		"^X"},		// CAN
+  {"\x19",		"^Y"},		// EM
+  {"\x1A",		"^Z"},		// SUB
+//  {"\x1B",		"^["},		// ESC Esc key.  Commented out coz it's the ANSI start byte in the above multibyte keys.  Handled in the code with a timeout.
+  {"\x1C",		"^\\"},		// FS SIGQUIT
+  {"\x1D",		"^]"},		// GS
+  {"\x1E",		"^^"},		// RS
+  {"\x1F",		"^_"},		// US
+  {"\x7f",		"BS"},		// Backspace key, usually.  Ctrl-? perhaps?
+
+  // TODO - sort these into terminal types, just for reference.
   {"\x1B[3~",		"Del"},
   {"\x1B[2~",		"Ins"},
   {"\x1B[D",		"Left"},
@@ -333,43 +366,38 @@ struct key keys[] =
   {"\x1B[5~",		"PgUp"},
   {"\x1B[6~",		"PgDn"},
   {"\x1B\x4F\x50",	"F1"},
-  {"\x1B[11~",		"F1"},
-  {"\x1B\x31",		"F1"},
-  {"\x1BOP",		"F1"},
   {"\x1B\x4F\x51",	"F2"},
-  {"\x1B[12~",		"F2"},
-  {"\x1B\x32",		"F2"},
-  {"\x1BOO",		"F2"},
   {"\x1B\x4F\x52",	"F3"},
-  {"\x1B[13~",		"F3"},
-  {"\x1B\x33~",		"F3"},
-  {"\x1BOR",		"F3"},
   {"\x1B\x4F\x53",	"F4"},
-  {"\x1B[14~",		"F4"},
-  {"\x1B\x34",		"F4"},
+
+  {"\x1BOP",		"F1"},
+  {"\x1BOO",		"F2"},
+  {"\x1BOR",		"F3"},
   {"\x1BOS",		"F4"},
+
+  {"\x1B[11~",		"F1"},
+  {"\x1B[12~",		"F2"},
+  {"\x1B[13~",		"F3"},
+  {"\x1B[14~",		"F4"},
   {"\x1B[15~",		"F5"},
-  {"\x1B\x35",		"F5"},
   {"\x1B[17~",		"F6"},
-  {"\x1B\x36",		"F6"},
   {"\x1B[18~",		"F7"},
-  {"\x1B\x37",		"F7"},
   {"\x1B[19~",		"F8"},
-  {"\x1B\x38",		"F8"},
   {"\x1B[20~",		"F9"},
-  {"\x1B\x39",		"F9"},
   {"\x1B[21~",		"F10"},
-  {"\x1B\x30",		"F10"},
   {"\x1B[23~",		"F11"},
   {"\x1B[24~",		"F12"},
+
   {"\x1B\x4f\x31;2P",	"Shift F1"},
-  {"\x1B[1;2P",		"Shift F1"},
   {"\x1B\x4f\x31;2Q",	"Shift F2"},
-  {"\x1B[1;2Q",		"Shift F2"},
   {"\x1B\x4f\x31;2R",	"Shift F3"},
-  {"\x1B[1;2R",		"Shift F3"},
   {"\x1B\x4f\x31;2S",	"Shift F4"},
+
+  {"\x1B[1;2P",		"Shift F1"},
+  {"\x1B[1;2Q",		"Shift F2"},
+  {"\x1B[1;2R",		"Shift F3"},
   {"\x1B[1;2S",		"Shift F4"},
+
   {"\x1B[15;2~",	"Shift F5"},
   {"\x1B[17;2~",	"Shift F6"},
   {"\x1B[18;2~",	"Shift F7"},
@@ -379,39 +407,22 @@ struct key keys[] =
   {"\x1B[23;2~",	"Shift F11"},
   {"\x1B[24;2~",	"Shift F12"},
 
-//  {"\x00",		"^@"},    // NUL Commented out coz it's the C string terminator, and may confuse things.
-  {"\x01",		"^A"},    // SOH
-  {"\x02",		"^B"},    // STX
-  {"\x03",		"^C"},    // ETX SIGTERM
-  {"\x04",		"^D"},    // EOT
-  {"\x05",		"^E"},    // ENQ
-  {"\x06",		"^F"},    // ACK
-  {"\x07",		"^G"},    // BEL
-  {"\x08",		"Del"},    // BS  Delete key, usually.
-  {"\x09",		"Tab"},    // HT  Tab key.
-  {"\x0A",		"Return"},  // LF  Return key.  Roxterm at least is translating both Ctrl-J and Ctrl-M into this.
-  {"\x0B",		"^K"},    // VT
-  {"\x0C",		"^L"},    // FF
-  {"\x0D",		"^M"},    // CR  Other Return key, usually.
-  {"\x0E",		"^N"},    // SO
-  {"\x0F",		"^O"},    // SI
-  {"\x10",		"^P"},    // DLE
-  {"\x11",		"^Q"},    // DC1
-  {"\x12",		"^R"},    // DC2
-  {"\x13",		"^S"},    // DC3
-  {"\x14",		"^T"},    // DC4
-  {"\x15",		"^U"},    // NAK
-  {"\x16",		"^V"},    // SYN
-  {"\x17",		"^W"},    // ETB
-  {"\x18",		"^X"},    // CAN
-  {"\x19",		"^Y"},    // EM
-  {"\x1A",		"^Z"},    // SUB
-//  {"\x1B",		"^["},    // ESC Esc key.  Commented out coz it's the ANSI start byte in the above multibyte keys.  Handled in the code with a timeout.
-  {"\x1C",		"^\\"},    // FS
-  {"\x1D",		"^]"},    // GS
-  {"\x1E",		"^^"},    // RS
-  {"\x1F",		"^_"},    // US
-  {"\x7f",		"BS"},    // Backspace key, usually.  Ctrl-? perhaps?
+  // MC "Esc digit" specials.
+  // NOTE - The MC Esc variations might not be such a good idea, other programs want the Esc key for other things.
+  //          Notably seems that "Esc somekey" is used in place of "Alt somekey" AKA "Meta somekey" coz apparently some OSes swallow those.
+  //            Conversely, some terminals send "Esc somekey" when you do "Alt somekey".
+  //          MC Esc variants might be used on Macs for other things?
+  {"\x1B\x31",		"F1"},
+  {"\x1B\x32",		"F2"},
+  {"\x1B\x33",		"F3"},
+  {"\x1B\x34",		"F4"},
+  {"\x1B\x35",		"F5"},
+  {"\x1B\x36",		"F6"},
+  {"\x1B\x37",		"F7"},
+  {"\x1B\x38",		"F8"},
+  {"\x1B\x39",		"F9"},
+  {"\x1B\x30",		"F10"},
+
   {NULL, NULL}
 };
 
