@@ -1325,6 +1325,7 @@ void drawBoxes(box *box)
 	else
 		drawBox(box);
 }
+
 void calcBoxes(box *box)
 {
 	if (box->sub1)	// If there's one sub box, there's always two.
@@ -2651,4 +2652,3 @@ void boxes_main(void)
 	puts("\n");
 	fflush(stdout);
 }
-
