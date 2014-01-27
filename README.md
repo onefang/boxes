@@ -28,7 +28,6 @@ time to show the code.  I'll get back to working on it when I can.
 
 Toybox uses mecurial instead of git, but I keep all my stuff on github. 
 Boxes will hopefully be incorporated into toybox in a highly altered
-form some day in the future.  So this is just atemporary git repo for my
-convenience.  If and when boxes migrates to toybox, this repo will be
+form some day in the future.  So this is just a temporary git repo for
+my convenience.  If and when boxes migrates to toybox, this repo will be
 retired.
-
