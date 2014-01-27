@@ -2020,7 +2020,7 @@ struct keyCommand simpleEmacsKeys[] =
   {"^N",	"next-line"},
   {"End",	"end-of-line"},
   {"^E",	"end-of-line"},
-  {"^X^C",	"save-buffers-kill-emacs"},	// Damn, Ctrl C getting eaten by default signal handling.
+  {"^X^C",	"save-buffers-kill-emacs"},	// Damn, Ctrl C getting eaten by default signal handling.  On the other hand, at least the "kill-emacs" part will work.  lol
   {"^Xq",	"save-buffers-kill-emacs"},	// TODO - Faking this so we can actually exit.  Remove it later.
   {"^X^S",	"save-buffer"},
   {"Home",	"beginning-of-line"},
@@ -2200,8 +2200,8 @@ struct keyCommand simpleLessKeys[] =
   {"Return",	"downLine"},
   {"End",	"endOfLine"},
   {"q",		"quit"},
-  {":q",	"quit"},
-  {"ZZ",	"quit"},
+  {":q",	"quit"},	// TODO - A vi ism, should do ex command stuff instead.
+  {"ZZ",	"quit"},	// This one will suck.
   {"PgDn",	"downPage"},
   {"f",		"downPage"},
   {" ",		"downPage"},
@@ -2237,8 +2237,8 @@ struct keyCommand simpleMoreKeys[] =
   {"j",		"downLine"},
   {"Return",	"downLine"},
   {"q",		"quit"},
-  {":q",	"quit"},
-  {"ZZ",	"quit"},
+  {":q",	"quit"},	// See comments for "less".
+  {"ZZ",	"quit"},	// See comments for "less".
   {"f",		"downPage"},
   {" ",		"downPage"},
   {"^F",	"downPage"},
