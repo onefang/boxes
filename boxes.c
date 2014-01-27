@@ -95,7 +95,7 @@ GLOBALS(
  * and each view points to a content (file) for it's text.  A content can
  * have many views.  Each content has a context (editor).  There is only
  * ever one edit line, it's the line that is being edited at the moment. 
- * Tthe edit line moves within and between boxes (including the command
+ * The edit line moves within and between boxes (including the command
  * line) as needed.
  *
  * The justification for boxes is that most of the editors we are trying to
@@ -422,7 +422,7 @@ Have a common menu up the top.
     MC has a menu that changes per mode.
     Nano has no menu.
 Have a common display of certain keys down the bottom.
-    MC like is one row of F1 to F10, but changes for edit / view / file browse.  But those are contexts here.
+    MC is one row of F1 to F10, but changes for edit / view / file browse.  But those are contexts here.
     Nano is 12 random Ctrl keys, possibly in two lines, that changes depending on the editor mode, like editing the prompt line for various reasons, help.
 */
 struct context				// Defines a context for content.  Text viewer, editor, file browser for instance.
@@ -443,7 +443,7 @@ struct context				// Defines a context for content.  Text viewer, editor, file b
     //   Or not, since the commands might be different / more of them.
 };
 
-// TODO - might be better off just having having a general purpose "widget" which includes details of where it gets attached.
+// TODO - might be better off just having a general purpose "widget" which includes details of where it gets attached.
 // Status lines can have them to.
 struct border
 {
@@ -2434,7 +2434,7 @@ void boxes_main(void)
 
 	// TODO - Should do an isatty() here, though not sure about the usefullness of driving this from a script or redirected input, since it's supposed to be a UI for terminals.
 	//          It would STILL need the terminal size for output though.  Perhaps just bitch and abort if it's not a tty?
-	//          On the other hand, sed don't need no stikin' UI.  And things like more or less should be usable on the end of a pipe.
+	//          On the other hand, sed don't need no stinkin' UI.  And things like more or less should be usable on the end of a pipe.
 
 	// TODO - set up a handler for SIGWINCH to find out when the terminal has been resized.
 	terminal_size(&W, &H);
