@@ -303,6 +303,7 @@ struct key
 //            Conversely, some terminals send "Esc somekey" when you do "Alt somekey".
 //          Those MC Esc variants might be used on Macs for other things?
 // TODO - Don't think I got all the linux console variations.
+// TODO - tmux messes with the shift function keys somehow.
 // TODO - Add more shift variations, plus Ctrl & Alt variations.
 // TODO - Add other miscelany that does not use an escape sequence.  Including mouse events.
 // TODO - Perhaps sort this for quicker searching, OR to say which terminal is which, though there is some overlap.
@@ -380,40 +381,38 @@ struct key keys[] =
 	{"\x1B[23;2~",		"Shift F11"},
 	{"\x1B[24;2~",		"Shift F12"},
 
-	// These are here for documentation, but some are mapped to particular key names.
-	// The commented out control keys are handled in editLine(), or just used via "^X".
-//	{"\x00",		"^@"},		// NUL
-//	{"\x01",		"^A"},		// SOH
-//	{"\x02",		"^B"},		// STX
-//	{"\x03",		"^C"},		// ETX
-//	{"\x04",		"^D"},		// EOT
-//	{"\x05",		"^E"},		// ENQ
-//	{"\x06",		"^F"},		// ACK
-//	{"\x07",		"^G"},		// BEL
+//	{"\x00",		"^@"},		// NUL Commented out coz it's the C string terminator, and may confuse things.
+	{"\x01",		"^A"},		// SOH
+	{"\x02",		"^B"},		// STX
+	{"\x03",		"^C"},		// ETX SIGTERM
+	{"\x04",		"^D"},		// EOT
+	{"\x05",		"^E"},		// ENQ
+	{"\x06",		"^F"},		// ACK
+	{"\x07",		"^G"},		// BEL
 	{"\x08",		"Del"},		// BS  Delete key, usually.
 	{"\x09",		"Tab"},		// HT  Tab key.
 	{"\x0A",		"Return"},	// LF  Return key.  Roxterm at least is translating both Ctrl-J and Ctrl-M into this.
-//	{"\x0B",		"^K"},		// VT
-//	{"\x0C",		"^L"},		// FF
-//	{"\x0D",		"^M"},		// CR
-//	{"\x0E",		"^N"},		// SO
-//	{"\x0F",		"^O"},		// SI
-//	{"\x10",		"^P"},		// DLE
-//	{"\x11",		"^Q"},		// DC1
-//	{"\x12",		"^R"},		// DC2
-//	{"\x13",		"^S"},		// DC3
-//	{"\x14",		"^T"},		// DC4
-//	{"\x15",		"^U"},		// NAK
-//	{"\x16",		"^V"},		// SYN
-//	{"\x17",		"^W"},		// ETB
-//	{"\x18",		"^X"},		// CAN
-//	{"\x19",		"^Y"},		// EM
-//	{"\x1A",		"^Z"},		// SUB
-//	{"\x1B",		"Esc"},		// ESC Esc key.  Commented out coz it's the ANSI start byte in the above multibyte keys.  Handled in the code with a timeout.
-//	{"\x1C",		"^\\"},		// FS
-//	{"\x1D",		"^]"},		// GS
-//	{"\x1E",		"^^"},		// RS
-//	{"\x1F",		"^_"},		// US
+	{"\x0B",		"^K"},		// VT
+	{"\x0C",		"^L"},		// FF
+	{"\x0D",		"^M"},		// CR  Other Return key, usually.
+	{"\x0E",		"^N"},		// SO
+	{"\x0F",		"^O"},		// SI
+	{"\x10",		"^P"},		// DLE
+	{"\x11",		"^Q"},		// DC1
+	{"\x12",		"^R"},		// DC2
+	{"\x13",		"^S"},		// DC3
+	{"\x14",		"^T"},		// DC4
+	{"\x15",		"^U"},		// NAK
+	{"\x16",		"^V"},		// SYN
+	{"\x17",		"^W"},		// ETB
+	{"\x18",		"^X"},		// CAN
+	{"\x19",		"^Y"},		// EM
+	{"\x1A",		"^Z"},		// SUB
+	{"\x1B",		"^["},		// ESC Esc key.  Commented out coz it's the ANSI start byte in the above multibyte keys.  Handled in the code with a timeout.
+	{"\x1C",		"^\\"},		// FS
+	{"\x1D",		"^]"},		// GS
+	{"\x1E",		"^^"},		// RS
+	{"\x1F",		"^_"},		// US
 	{"\x7f",		"BS"},		// Backspace key, usually.  Ctrl-? perhaps?
 	{NULL, NULL}
 };
@@ -1729,66 +1728,9 @@ void nop(box *box, event *event)
 	// 'tis a nop, don't actually do anything.
 }
 
+
+
 #define BUFFER_LEN 16
-
-
-int handleKey(view *view, int i, char *keyName, char *buffer)
-{
-	// This is using the currentBox instead of view, coz the command line keys are part of the box context now, not separate.
-	struct keyCommand *keys = currentBox->view->content->context->modes[currentBox->view->mode].keys;
-	int k, len = strlen(keyName), found = 0, doZero = 1;
-
-	for (k = 0; keys[k].key; k++)
-	{
-		if (strncmp(keys[k].key, keyName, len) == 0)
-		{
-			if ('\0' != keys[k].key[len])
-			{		// Found only a partial key.
-				if (('^' == keyName[0]) && (1 != len))  // Want to let actual ^ characters through unmolested.
-				{	// And it's a control key combo, so keep accumulating them.
-					// Note this wont just keep accumulating, coz the moment it no longer matches any key combos, it fails to be found and falls through.
-					found = 1;
-					i++;
-					doZero = 0;
-					break;
-				}
-				else	// It's really an ordinary key, but we can break early at least.
-					break;
-			}
-			else		// We have matched the entire key name, so do it.
-			{
-				found = 1;
-				doCommand(view->content->context->commands, keys[k].command, view, NULL);
-			}
-			break;
-		}
-	}
-	if (!found)			// No bound key, or partial control key combo, add input to the current view.
-	{
-		// TODO - Should check for tabs to, and insert them.
-		//        Though better off having a function for that?
-		if ((i == 0) && (isprint(buffer[0])))
-		{
-			mooshStrings(view->line, buffer, view->iX, 0, !TT.overWriteMode);
-			view->oW = formatLine(view, view->line->line, &(view->output));
-			moveCursorRelative(view, strlen(buffer), 0, 0, 0);
-		}
-		else
-		{
-			// TODO - Should bitch on the status line instead.
-			fprintf(stderr, "Key is %s\n", keyName);
-			fflush(stderr);
-		}
-	}
-	if (doZero)
-	{
-		i = 0;
-		buffer[0] = '\0';
-	}
-
-	return i;
-}
-
 
 // Basically this is the main loop.
 
@@ -1800,14 +1742,16 @@ void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
 {
 	struct termios termio, oldtermio;
 	struct pollfd pollfds[1];
-	char buffer[BUFFER_LEN];
+	char buffer[BUFFER_LEN + 1];
+	char command[BUFFER_LEN + 1];
 	int pollcount = 1;
 	int i = 0;
 // TODO - multiline editLine is an advanced feature.  Editing boxes just moves the editLine up and down.
 //	uint16_t h = 1;
 // TODO - should check if it's at the top of the box, then grow it down instead of up if so.
 
-	buffer[0] = '\0';
+	buffer[0] = 0;
+	command[0] = 0;
 
 	if (view->box)
 		sizeViewToBox(view->box, X, Y, W, H);
@@ -1845,6 +1789,8 @@ void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
 		// TODO - We can reuse one or two of these to have less of them.
 		int j = 0, p, ret, y, len;
 
+		// Coz things might change out from under us, find the current view.
+		// TODO - see if I can get this lot out of here.
 		if (commandMode)
 			view = commandLine;
 		else
@@ -1861,6 +1807,7 @@ void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
 		pollfds[0].events = POLLIN;
 		pollfds[0].fd = 0;
 
+		// TODO - Should only ask for a time out after we get an Escape.
 		p = poll(pollfds, pollcount, 100);		// Timeout of one tenth of a second (100).
 		if (0 >  p) perror_exit("poll");
 		if (0 == p)					// A timeout, trigger a time event.
@@ -1868,24 +1815,21 @@ void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
 			if ((1 == i) && ('\x1B' == buffer[0]))
 			{
 				// After a short delay to check, this is a real Escape key, not part of an escape sequence, so deal with it.
-				strcpy(buffer, "^[");
-				i = 1;
-				i = handleKey(view, i, buffer, buffer);
-				continue;
+				strcpy(command, "^[");
+				i = 0;
+				buffer[0] = 0;
 			}
-			else
-			{
-				// TODO - Send a timer event somewhere.
-				// This wont be a precise timed event, but don't think we need one.
-				continue;
-			}
+			// TODO - Send a timer event somewhere.  This wont be a precise timed event, but don't think we need one.
 		}
-		for (p--; 0 <= p; p--)
+
+		while (0 < p)
 		{
+			p--;
 			if (pollfds[p].revents & POLLIN)
 			{
-				ret = read(pollfds[p].fd, &buffer[i], 1);
-				buffer[i + 1] = '\0';
+				// I am assuming that we get the input atomically, each multibyte key fits neatly into one read.
+				// If that's not true (which is entirely likely), then we have to get complicated with circular buffers and stuff, or just one byte at a time.
+				ret = read(pollfds[p].fd, &buffer[i], BUFFER_LEN - i);
 				if (ret < 0)			// An error happened.
 				{
 					// For now, just ignore errors.
@@ -1896,66 +1840,84 @@ void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
 				{
 					fprintf(stderr, "EOF\n");
 					fflush(stderr);
-					break;
-				}
-				else if (BUFFER_LEN == i + 1)	// Ran out of buffer.
-				{
-					fprintf(stderr, "Full buffer -%s\n", buffer);
-					for (j = 0; buffer[j + 1]; j++)
-						fprintf(stderr, "(%x) %c, ", (int) buffer[j], buffer[j]);
-					fflush(stderr);
-					i = 0;
 				}
 				else
 				{
-					char *keyName = NULL;
-
-					if (('\x1B' == buffer[i]) && (0 != i))	// An unrecognised escape sequence, start again.
-										// TODO - it might be a reply from a query we sent, like asking for the terminal size or cursor position.  Which apparently is the same thing.
+					i += ret;
+					if (BUFFER_LEN <= i)	// Ran out of buffer.
 					{
-						// TODO - Should bitch on the status line instead.
-						fprintf(stderr, "Unknown escape sequence ");
+						fprintf(stderr, "Full buffer - %s  ->  %s\n", buffer, command);
 						for (j = 0; buffer[j + 1]; j++)
 							fprintf(stderr, "(%x) %c, ", (int) buffer[j], buffer[j]);
-						fprintf(stderr, "\n");
 						fflush(stderr);
-						buffer[0] = '\x1B';
-						i = 1;
-						continue;
+						i = 0;
+						buffer[0] = 0;
 					}
-
-					for (j = 0; keys[j].code; j++)		// Search for multibyte keys and some control keys.
-					{
-						if (strcmp(keys[j].code, buffer) == 0)
-						{
-							keyName = keys[j].name;
-							break;
-						}
-					}
-					// See if it's an ordinary key,
-					if ((NULL == keyName) && (0 == i) && isprint(buffer[0]))
-						keyName = buffer;
-					// Check for control keys, but not those that have already been identified, or ESC.
-					if ((NULL == keyName) && iscntrl(buffer[i]) && ('\x1B' != buffer[i]))
-					{
-						// Convert to "^X" format.
-						buffer[i + 1] = buffer[i] + '@';
-						buffer[i++] = '^';
-						buffer[i + 1] = '\0';
-						keyName=buffer;
-					}
-					// See if it's already accumulating a control key combo.
-					if ('^' == buffer[0])
-						keyName = buffer;
-					// For now we will assume that control keys could be the start of multi key combinations.
-					// TODO - If the view->context HAS on event handler, use it, otherwise look up the specific event handler in the context modes ourselves?
-					if (keyName)				// Search for a bound key.
-						i = handleKey(view, i, keyName, buffer);
 					else
-						i++;
+					    buffer[i] = 0;
 				}
 			}
 		}
+
+// TODO - think vi got screwed up now.  sigh
+
+		// For a real timeout checked Esc, buffer is now empty, so this for loop wont find it anyway.
+		// While it's true we could avoid it by checking, the user already had to wait for a time out, and this loop wont take THAT long.
+		for (j = 0; keys[j].code; j++)		// Search for multibyte keys and some control keys.
+		{
+			if (strcmp(keys[j].code, buffer) == 0)
+			{
+				strcat(command, keys[j].name);
+				i = 0;
+				buffer[0] = 0;
+				break;
+			}
+		}
+
+		// See if it's an ordinary key,
+		if ((1 == i) && isprint(buffer[0]))
+		{
+			// If there's an outstanding command, add this to the end of it.
+			if (command[0])
+				strcat(command, buffer);
+			else
+			{
+				// TODO - Should check for tabs to, and insert them.
+				//        Though better off having a function for that?
+				// TODO - see if I can get these out of here.  Some sort of pushCharacter(buffer, blob) that is passed in.
+				mooshStrings(view->line, buffer, view->iX, 0, !TT.overWriteMode);
+				view->oW = formatLine(view, view->line->line, &(view->output));
+				moveCursorRelative(view, strlen(buffer), 0, 0, 0);
+			}
+			i = 0;
+			buffer[0] = 0;
+		}
+
+		// TODO - If the view->context has on event handler, use it, otherwise look up the specific event handler in the context modes ourselves.
+		if (command[0])				// Search for a bound key.
+		{
+			if (BUFFER_LEN <= strlen(command))
+			{
+				fprintf(stderr, "Full command buffer - %s \n", command);
+				fflush(stderr);
+				command[0] = 0;
+			}
+
+			// This is using the currentBox instead of view, coz the command line keys are part of the box context now, not separate.
+			// More importantly, the currentBox may change due to a command.
+			struct keyCommand *ourKeys = currentBox->view->content->context->modes[currentBox->view->mode].keys;
+
+			for (j = 0; ourKeys[j].key; j++)
+			{
+				if (strcmp(ourKeys[j].key, command) == 0)
+				{
+					doCommand(view->content->context->commands, ourKeys[j].command, view, NULL);
+					command[0] = 0;
+					break;
+				}
+			}
+		}
+
 	}
 
 	// Restore the old terminal settings.
