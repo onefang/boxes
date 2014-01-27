@@ -1,6 +1,4 @@
-/* vi: set sw=4 ts=4:
- *
- * boxes.c - Generic editor development sandbox.
+/* boxes.c - Generic editor development sandbox.
  *
  * Copyright 2012 David Seikel <won_fang@yahoo.com>
  *
