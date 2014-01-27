@@ -2004,7 +2004,7 @@ struct keyCommand simpleCommandKeys[] =
 	{"Left",	"leftChar"},
 	{"Return",	"executeLine"},
 	{"Right",	"rightChar"},
-	{"Shift F2",	"switchMode"},
+	{"^[",		"switchMode"},
 	{"Up",		"upLine"},
 	{NULL, NULL}
 };
@@ -2306,7 +2306,9 @@ struct keyCommand simpleMceditKeys[] =
 	{"Down",	"downLine"},
 	{"End",		"endOfLine"},
 	{"F10",		"quit"},
+	{"^[0",		"quit"},
 	{"F2",		"save"},
+	{"^[2",		"save"},
 	{"Home",	"startOfLine"},
 	{"Left",	"leftChar"},
 	{"PgDn",	"downPage"},
@@ -2314,10 +2316,12 @@ struct keyCommand simpleMceditKeys[] =
 	{"Return",	"splitLine"},
 	{"Right",	"rightChar"},
 	{"Shift F2",	"switchMode"},
-	{"Shift F3",	"splitV"},
-	{"Shift F4",	"splitH"},
-	{"Shift F6",	"switchBoxes"},
-	{"Shift F9",	"deleteBox"},
+	{"^[x",		"switchMode"},	// Emacs like.
+	{"^[:",		"switchMode"},	// Sorta vi like.
+	{"^O|",		"splitV"},	// MC doesn't have a split window concept, so make these up to match tmux more or less.
+	{"^O-",		"splitH"},
+	{"^Oo",		"switchBoxes"},
+	{"^Ox",		"deleteBox"},
 	{"Up",		"upLine"},
 	{NULL, NULL}
 };
