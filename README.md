@@ -23,9 +23,6 @@ If you want to see how it can be used to build specific editors, start
 at the end and work backwards.  Reading the lengthy comments at the
 beginning would also be useful.
 
-I've not even looked at it in the last month, just thought it was past
-time to show the code.  I'll get back to working on it when I can.
-
 Toybox uses mecurial instead of git, but I keep all my stuff on github. 
 Boxes will hopefully be incorporated into toybox in a highly altered
 form some day in the future.  So this is just a temporary git repo for
