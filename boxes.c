@@ -196,6 +196,100 @@ GLOBALS(
  * everything all the time.  And to avoid screen redraws.
  */
 
+/* Robs "It's too big" lament.
+
+> So when you give me code, assume I'm dumber than you. Because in this 
+> context, I am. I need bite sized pieces, each of which I can
+> understand in its entirety before moving on to the next.  
+
+As I mentioned in my last email to the Aboriginal linux list, I wrote
+the large blob so I could see how the ideas all work to do the generic
+editor stuff and other things.  It kinda needs to be that big to do
+anything that is actually useful.  So, onto musings about cutting it up
+into bite sized bits...
+
+You mentioned on the Aboriginal Linux list that you wanted a
+"readline", and you listed some features.  My reply was that you had
+basically listed the features of my "basic editor".  The main
+difference between "readline" and a full screen editor, is that the
+editor is fullscreen, while the "readline" is one line.  They both have
+to deal with a list of lines, going up and down through those lines,
+editing the contents of those lines, one line at a time.  For persistent
+line history, they both have to save and load those lines to a file.
+Other than that "readline" adds other behaviour, like moving the
+current line to the end when you hit return and presenting that line to
+the caller (here's the command).  So just making "readline" wont cut
+out much of the code.  In fact, my "readline" is really just a thin
+wrapper around the rest of the code.
+
+Starting from the other end of the size spectrum, I guess "find out
+terminal size" is a small enough bite sized chunk.  To actually do
+anything useful with that you would probably start to write stuff I've
+already written though.  Would be better off just using the stuff I've
+already written.  On the other hand, maybe that would be useful for
+"ls" listings and the like, then we can start with just that bit?
+
+I guess the smallest useful command I have in my huge blob of code
+would be "more".  I could even cut it down more.  Show a page of text,
+show the next page of text when you hit the space bar, quit when you
+hit "q".  Even then, I would estimate it would only cut out a third of
+the code.
+
+On the other hand, there's a bunch of crap in that blob that is for
+future plans, and is not doing anything now.
+
+In the end though, breaking it up into suitable bite sized bits might
+be almost as hard as writing it in the first place.  I'll see what I
+can do, when I find some time.  I did want to break it up into three
+bits anyway, and there's a TODO to untangle a couple of bits that are
+currently too tightly coupled.
+
+*/
+
+/* Robs contradiction
+
+On Thu, 27 Dec 2012 06:06:53 -0600 Rob Landley <rob@landley.net> wrote:
+
+> On 12/27/2012 12:56:07 AM, David Seikel wrote:  
+> > On Thu, 27 Dec 2012 00:37:46 -0600 Rob Landley <rob@landley.net>  
+> > wrote:  
+> > > Since ls isn't doiing any of that, probing would just be awkward
+> > > so toysh should set COLUMNS to a sane value. The problem is,
+> > > we're not using toysh yet because it's still just a stub...  
+> > 
+> > I got some or all of that terminal sizing stuff in my editor thingy
+> > already if I remember correctly.  I remember you wanted me to cut it
+> > down into tiny bits to start with, so you don't have to digest the  
+> > huge lump I sent.  
+> 
+> Basically what I'd like is a self-contained line reader. More or less
+> a getline variant that can handle cursoring left and right to insert  
+> stuff, handle backspace past a wordwrap (which on unix requires
+> knowing the screen width and your current cursor position), and one
+> that lets up/down escape sequences be hooked for less/more screen
+> scrolling, vi line movement, shell command history, and so on.  
+
+Which is most of an editor already, so how to break it up into bite
+sized morsels?
+
+> There's sort of three levels here, the first is "parse raw input,  
+> assembling escape sequences into cursor-left and similar as
+> necessary". (That's the one I had to redo in busybox vi because they
+> didn't do it right.)
+> 
+> The second is "edit a line of text, handling cursoring _within_ the  
+> line". That's the better/interactive getline().
+> 
+> The third is handling escapes from that line triggering behavior in
+> the larger command (cursor up and cursor down do different things in
+> less, in vi, and in shell command history).
+> 
+> The fiddly bit is that terminal_size() sort of has to integrate with  
+> all of these. Possibly I need to have width and height be members of  
+> struct toy_context. Or have the better_getline() take a pointer to a  
+> state structure it can update, containing that info...
+
+*/
 
 struct key
 {
@@ -837,7 +931,80 @@ void formatCheckCursor(view *view, long *cX, long *cY, char *input)
 }
 
 // TODO - Should convert control characters to reverse video, and deal with UTF8.
-// TODO - We get passed a NULL input, apparently when the file length is close to the screen length.  See the mailing list for details.  Fix that.
+/* FIXME - We get passed a NULL input, apparently when the file length is close to the screen length. -
+
+> On Thu, 6 Sep 2012 11:56:17 +0800 Roy Tam <roytam@gmail.com> wrote:
+>   
+> > 2012/9/6 David Seikel <onefang@gmail.com>:  
+> > >> Program received signal SIGSEGV, Segmentation fault.
+> > >> formatLine (view=0x8069168, input=0x0, output=0x806919c)
+> > >>     at toys/other/boxes.c:843
+> > >> 843        int len = strlen(input), i = 0, o = 0;
+> > >> (gdb) bt
+> > >> #0  formatLine (view=0x8069168, input=0x0, output=0x806919c)
+> > >>     at toys/other/boxes.c:843
+> > >> #1  0x0804f1dd in moveCursorAbsolute (view=0x8069168, cX=0,
+> > >> cY=10, sX=0, sY=0) at toys/other/boxes.c:951
+> > >> #2  0x0804f367 in moveCursorRelative (view=0x8069168, cX=0,
+> > >> cY=10, sX=0, sY=0) at toys/other/boxes.c:1011
+> > >> #3  0x0804f479 in upLine (view=0x8069168, event=0x0) at
+> > >> toys/other/boxes.c:1442 #4  0x0804fb63 in handleKey
+> > >> (view=0x8069168, i=2, keyName=<optimized out>, buffer=0xbffffad8
+> > >> "\033[A") at toys/other/boxes.c:1593 #5  0x0805008d in editLine
+> > >> (view=0x8069168, X=-1, Y=-1, W=-1, H=-1) at
+> > >> toys/other/boxes.c:1785 #6  0x08050288 in boxes_main () at
+> > >> toys/other/boxes.c:2482 #7  0x0804b262 in toy_exec
+> > >> (argv=0xbffffd58) at main.c:104 #8  0x0804b29d in toybox_main ()
+> > >> at main.c:118 #9  0x0804b262 in toy_exec (argv=0xbffffd54) at
+> > >> main.c:104 #10 0x0804b29d in toybox_main () at main.c:118
+> > >> #11 0x0804affa in main (argc=5, argv=0xbffffd54) at main.c:159  
+> > >
+> > > No segfault here when I try that, nor with different files.  As I
+> > > said, it has bugs.  I have seen other cases before when NULL lines
+> > > are passed around near that code.  Guess I've not got them all.
+> > > Might help to mention what terminal proggy you are using, it's
+> > > size in characters, toybox version, OS, etc.  Something is
+> > > different between you and me.  
+> > 
+> > Terminal Program: PuTTY
+> > Windows size: 80 * 25 chars
+> > Toybox version: hg head
+> > OS: Linux 3.2 (Debian wheezy)
+> > File: Toybox LICENSE file  
+> 
+> I'll install PuTTY, try toybox hg head, and play with them later, see
+> if I can reproduce that segfault.  I use the last released tarball of
+> toybox, an old Ubuntu, and a bunch of other terminal proggies.  I did
+> not know that PuTTY had been ported to Unix.
+> 
+> But as I mentioned, not interested in a bug hunt right now.  That will
+> be more appropriate when it's less of a "sandbox for testing the
+> ideas" and more of a "good enough to bother using".  Always good to
+> have other terminals for testing though.  
+
+Seems to be sensitive to the number of lines.  On my usual huge
+roxterm, using either toybox 0.4 or hg head, doing this -
+
+./toybox boxes -m less LICENSE -h 25
+
+and just hitting down arrow until you get to the bottom of the page
+segfaults as well.  -h means "pretend the terminal is that many lines
+high", there's a similar -w as well.  80x25 in any other terminal did
+the same.  For that particular file (17 lines long), any value of -h
+between 19 and 34 will segfault after some moving around.  -h 35 makes
+it segfault straight away.  Less than 19 or over 35 is fine.  Longer
+files don't have that problem, though I suspect it will happen on
+shortish files where the number of lines is about the length of the
+screen.
+
+I guess that somewhere I'm doing maths wrong and getting an out of
+bounds line number when the file length is close to the screen length.
+I'll make note of that, and fix it when I next get time to beat on
+boxes.
+
+Thanks for reporting it Roy.
+*/
+
 int formatLine(view *view, char *input, char **output)
 {
 	int len = strlen(input), i = 0, o = 0;
