@@ -495,10 +495,9 @@ char *borderCharsCurrent[][6] =
 
 typedef struct _box box;
 typedef struct _view view;
-typedef struct _event event;
 
 typedef void (*boxFunction) (box *box);
-typedef void (*eventHandler) (view *view, event *event);
+typedef void (*eventHandler) (view *view);
 
 struct function
 {
@@ -533,26 +532,6 @@ struct item
 struct borderWidget
 {
   char *text, *command;
-};
-
-// TODO - No idea if we will actually need this.
-struct _event
-{
-  struct function *function;
-  uint16_t X, Y;		// Current cursor position, or position of mouse click.
-  char type;
-  union
-  {
-    struct keyCommand *key;	// keystroke / mouse click
-    struct item *item;		// menu
-    struct borderWidget widget;	// border widget click
-    int    time;		// timer
-    struct			// scroll contents
-    {
-      int X, Y;
-    } scroll;
-    // TODO - might need events for - leave box, enter box.  Could use a new event type "command with arguments"?
-  };
 };
 
 // TODO - a generic "part of text", and what is used to define them.
@@ -683,7 +662,7 @@ static box *currentBox;
 static view *commandLine;
 static int commandMode;
 
-void doCommand(struct function *functions, char *command, view *view, event *event)
+void doCommand(struct function *functions, char *command, view *view)
 {
   if (command)
   {
@@ -694,7 +673,7 @@ void doCommand(struct function *functions, char *command, view *view, event *eve
       if (strcmp(functions[i].name, command) == 0)
       {
         if (functions[i].handler);
-          functions[i].handler(view, event);
+          functions[i].handler(view);
         break;
       }
     }
@@ -1416,7 +1395,7 @@ void calcBoxes(box *box)
   // Later we might use a dirty box flag to deal with this, if it's not too much of a complication.
 }
 
-void deleteBox(view *view, event *event)
+void deleteBox(view *view)
 {
   box *box = view->box;
 
@@ -1501,9 +1480,9 @@ void splitBox(box *box, float split)
     if (box->parent)
     {
       if (box == box->parent->sub1)
-        deleteBox(box->parent->sub2->view, NULL);
+        deleteBox(box->parent->sub2->view);
       else
-        deleteBox(box->parent->sub1->view, NULL);
+        deleteBox(box->parent->sub1->view);
     }
     return;
   }
@@ -1512,7 +1491,7 @@ void splitBox(box *box, float split)
   }
   else      // User meant to delete this, zero split.
   {
-      deleteBox(box->view, NULL);
+      deleteBox(box->view);
       return;
   }
   if (box->flags & BOX_HSPLIT)
@@ -1582,7 +1561,7 @@ void splitBox(box *box, float split)
 
 // TODO - Might be better to just have a double linked list of boxes, and traverse that instead.
 //          Except that leaves a problem when deleting boxes, could end up with a blank space.
-void switchBoxes(view *view, event *event)
+void switchBoxes(view *view)
 {
   box *box = view->box;
 
@@ -1627,19 +1606,19 @@ void switchBoxes(view *view, event *event)
 //        How to deal with the various argument needs?
 //        Might be where we can re use the toybox argument stuff.
 
-void halveBoxHorizontally(view *view, event *event)
+void halveBoxHorizontally(view *view)
 {
   view->box->flags |= BOX_HSPLIT;
   splitBox(view->box, 0.5);
 }
 
-void halveBoxVertically(view *view, event *event)
+void halveBoxVertically(view *view)
 {
   view->box->flags &= ~BOX_HSPLIT;
   splitBox(view->box, 0.5);
 }
 
-void switchMode(view *view, event *event)
+void switchMode(view *view)
 {
   currentBox->view->mode++;
   // Assumes that modes will always have a key mapping, which I think is a safe bet.
@@ -1648,48 +1627,48 @@ void switchMode(view *view, event *event)
   commandMode = currentBox->view->content->context->modes[currentBox->view->mode].flags & 1;
 }
 
-void leftChar(view *view, event *event)
+void leftChar(view *view)
 {
   moveCursorRelative(view, -1, 0, 0, 0);
 }
 
-void rightChar(view *view, event *event)
+void rightChar(view *view)
 {
   moveCursorRelative(view, 1, 0, 0, 0);
 }
 
-void upLine(view *view, event *event)
+void upLine(view *view)
 {
   moveCursorRelative(view, 0, -1, 0, 0);
 }
 
-void downLine(view *view, event *event)
+void downLine(view *view)
 {
   moveCursorRelative(view, 0, 1, 0, 0);
 }
 
-void upPage(view *view, event *event)
+void upPage(view *view)
 {
   moveCursorRelative(view, 0, 0 - (view->H - 1), 0, 0 - (view->H - 1));
 }
 
-void downPage(view *view, event *event)
+void downPage(view *view)
 {
   moveCursorRelative(view, 0, view->H - 1, 0, view->H - 1);
 }
 
-void endOfLine(view *view, event *event)
+void endOfLine(view *view)
 {
   moveCursorAbsolute(view, strlen(view->prompt) + view->oW, view->cY, 0, 0);
 }
 
-void startOfLine(view *view, event *event)
+void startOfLine(view *view)
 {
   // TODO - add the advanced editing "smart home".
   moveCursorAbsolute(view, strlen(view->prompt), view->cY, 0, 0);
 }
 
-void splitLine(view *view, event *event)
+void splitLine(view *view)
 {
   // TODO - should move this into mooshLines().
   addLine(view->content, view->line, &(view->line->line[view->iX]), 0);
@@ -1699,7 +1678,7 @@ void splitLine(view *view, event *event)
     drawBox(view->box);
 }
 
-void deleteChar(view *view, event *event)
+void deleteChar(view *view)
 {
   // TODO - should move this into mooshLines().
   // If we are at the end of the line, then join this and the next line.
@@ -1720,25 +1699,25 @@ void deleteChar(view *view, event *event)
     mooshStrings(view->line, NULL, view->iX, 1, !TT.overWriteMode);
 }
 
-void backSpaceChar(view *view, event *event)
+void backSpaceChar(view *view)
 {
   if (moveCursorRelative(view, -1, 0, 0, 0))
-    deleteChar(view, event);
+    deleteChar(view);
 }
 
-void saveContent(view *view, event *event)
+void saveContent(view *view)
 {
   saveFile(view->content);
 }
 
-void executeLine(view *view, event *event)
+void executeLine(view *view)
 {
   struct line *result = view->line;
 
   // Don't bother doing much if there's nothing on this line.
   if (result->line[0])
   {
-    doCommand(currentBox->view->content->context->commands, result->line, currentBox->view, event);
+    doCommand(currentBox->view->content->context->commands, result->line, currentBox->view);
     // If we are not at the end of the history contents.
     if (&(view->content->lines) != result->next)
     {
@@ -1764,20 +1743,20 @@ void executeLine(view *view, event *event)
     // Make sure there is one blank line at the end.
     if ('\0' != view->line->line[0])
     {
-      endOfLine(view, event);
-      splitLine(view, event);
+      endOfLine(view);
+      splitLine(view);
     }
   }
 
   saveFile(view->content);
 }
 
-void quit(view *view, event *event)
+void quit(view *view)
 {
   TT.stillRunning = 0;
 }
 
-void nop(box *box, event *event)
+void nop(box *box)
 {
   // 'tis a nop, don't actually do anything.
 }
@@ -1799,7 +1778,7 @@ static void lineChar(long extra, char *buffer)
 }
 
 // TODO - should merge this and the real one.  Note that when doing scripts and such, might want to turn off the line update until finished.
-static struct keyCommand * lineCommand(long extra, char *command, event *event)
+static struct keyCommand * lineCommand(long extra, char *command)
 {
   struct _view *view = (struct _view *) extra;		// Though we pretty much stomp on this straight away.
   int y, len;
@@ -1808,7 +1787,7 @@ static struct keyCommand * lineCommand(long extra, char *command, event *event)
   if (commandMode)	view = commandLine;
   else		view = currentBox->view;
 
-  doCommand(view->content->context->commands, command, view, event);
+  doCommand(view->content->context->commands, command, view);
 
   // Coz things might change out from under us, find the current view.  Again
   if (commandMode)	view = commandLine;
@@ -1843,11 +1822,11 @@ The response from a terminal size check command includes a prefix, a suffix, wit
 
   Mouse events are likely similar.
 */
-void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct keyCommand * (*lineCommand)(long extra, char *command, event *event))
+void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct keyCommand * (*lineCommand)(long extra, char *command))
 {
   struct pollfd pollfds[1];
   // Get the initial command set, and trigger the first cursor move.
-  struct keyCommand *ourKeys = lineCommand(extra, "", NULL);
+  struct keyCommand *ourKeys = lineCommand(extra, "");
   char buffer[20];
   char command[20];
   int pollcount = 1;
@@ -1984,8 +1963,7 @@ void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct key
       }
       if (found)
       {
-        // That last argument, an event pointer, should be the original raw keystrokes, though by this time that's been cleared.
-        ourKeys = lineCommand(extra, found, NULL);
+        ourKeys = lineCommand(extra, found);
         command[0] = 0;
       }
     }
@@ -2479,20 +2457,20 @@ struct context simpleNano =
 // Vi needs extra variables and functions.
 static int viTempExMode;
 
-void viMode(view *view, event *event)
+void viMode(view *view)
 {
   currentBox->view->mode = 0;
   commandMode = 0;
   viTempExMode = 0;
 }
 
-void viInsertMode(view *view, event *event)
+void viInsertMode(view *view)
 {
   currentBox->view->mode = 1;
   commandMode = 0;
 }
 
-void viExMode(view *view, event *event)
+void viExMode(view *view)
 {
   currentBox->view->mode = 2;
   commandMode = 1;
@@ -2502,18 +2480,18 @@ void viExMode(view *view, event *event)
   strcpy(commandLine->prompt, ":");
 }
 
-void viBackSpaceChar(view *view, event *event)
+void viBackSpaceChar(view *view)
 {
   if ((2 == currentBox->view->mode) && (0 == view->cX) && viTempExMode)
-    viMode(view, event);
+    viMode(view);
   else
-    backSpaceChar(view, event);
+    backSpaceChar(view);
 }
 
-void viStartOfNextLine(view *view, event *event)
+void viStartOfNextLine(view *view)
 {
-  startOfLine(view, event);
-  downLine(view, event);
+  startOfLine(view);
+  downLine(view);
 }
 
 // TODO - ex uses "shortest unique string" to match commands, should implement that, and do it for the other contexts to.
