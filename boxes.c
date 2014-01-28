@@ -304,6 +304,7 @@ struct key
 };
 
 // This table includes some variations I have found on some terminals, and the MC "Esc digit" versions.
+// http://rtfm.etla.org/xterm/ctlseq.html has a useful guide.
 // TODO - Don't think I got all the linux console variations.
 // TODO - Add more shift variations, plus Ctrl & Alt variations when needed.
 // TODO - tmux messes with the shift function keys somehow.
@@ -395,7 +396,7 @@ struct key keys[] =
   {"\x1B[23;2~",	"Shift F11"},
   {"\x1B[24;2~",	"Shift F12"},
 
-  // Some terminals are special, and it seems they only have four function keys.
+  // "Normal" Some terminals are special, and it seems they only have four function keys.
   {"\x1B[A",		"Up"},
   {"\x1B[B",		"Down"},
   {"\x1B[C",		"Right"},
@@ -411,7 +412,7 @@ struct key keys[] =
   {"\x1B[1;2R",		"Shift F3"},
   {"\x1B[1;2S",		"Shift F4"},
 
-  // Not sure what this odd collection is.
+  // "Application"  Esc O is known as SS3
   {"\x1BOA",		"Up"},
   {"\x1BOB",		"Down"},
   {"\x1BOC",		"Right"},
@@ -427,7 +428,7 @@ struct key keys[] =
   {"\x1BOR",		"F3"},
   {"\x1BOS",		"F4"},
   {"\x1BOT",		"F5"},
-  // These two conflict with the above four function key variation.
+  // These two conflict with the above four function key variations.
   {"\x1B[R",		"F6"},
   {"\x1B[S",		"F7"},
   {"\x1B[T",		"F8"},
@@ -437,16 +438,10 @@ struct key keys[] =
   {"\x1B[X",		"F12"},
 
   // Can't remember, but saw them somewhere.
-  {"\x1B\x4f\x46",	"End"},
-  {"\x1B\x4f\x48",	"Home"},
-  {"\x1B\x4F\x50",	"F1"},
-  {"\x1B\x4F\x51",	"F2"},
-  {"\x1B\x4F\x52",	"F3"},
-  {"\x1B\x4F\x53",	"F4"},
-  {"\x1B\x4f\x31;2P",	"Shift F1"},
-  {"\x1B\x4f\x31;2Q",	"Shift F2"},
-  {"\x1B\x4f\x31;2R",	"Shift F3"},
-  {"\x1B\x4f\x31;2S",	"Shift F4"},
+  {"\x1BO1;2P",		"Shift F1"},
+  {"\x1BO1;2Q",		"Shift F2"},
+  {"\x1BO1;2R",		"Shift F3"},
+  {"\x1BO1;2S",		"Shift F4"},
 
   // MC "Esc digit" specials.
   // NOTE - The MC Esc variations might not be such a good idea, other programs want the Esc key for other things.
@@ -2708,6 +2703,7 @@ void boxes_main(void)
   moveCursorAbsolute(commandLine, 0, commandLine->content->lines.length, 0, 0);
 
   // All the mouse tracking methods suck one way or another.  sigh
+  // http://rtfm.etla.org/xterm/ctlseq.html documents xterm stuff, near the bottom is the mouse stuff.
   // http://leonerds-code.blogspot.co.uk/2012/04/wide-mouse-support-in-libvterm.html is helpful.
   // Enable mouse (VT200 normal tracking mode, UTF8 encoding).  The limit is 2015.  Seems to only be in later xterms.
 //  printf("\x1B[?1005h");
