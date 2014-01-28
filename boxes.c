@@ -1790,6 +1790,20 @@ static void lineCommand(long extra, char *command, event *event)
 
 // Basically this is the main loop.
 
+/*  Unhandled complications -
+Less and more have the "ZZ" command, but nothing else seems to have multi ordinary character commands.
+
+Some editors have a shortcut command concept.  The smallest unique first part of each command will match, as well as anything longer.
+  A further complication is if we are not implementing some commands that might change what is "shortest unique prefix".
+
+The response from a terminal size check command includes a prefix, a suffix, with the data in the middle.
+  send "\x1B[s\x1B[999C\x1B[999B\x1B[6n\x1B[u"
+    Which breaks down to - save cursor position, down 999, right 999, request cursor position (DSR), restore cursor position.
+  response is "\x1B[ ; R", where the spaces are replaced by digits LINES and COLUMNS respectively.
+    And just to screw things up - {"\x1B[1;2R",		"Shift F3"}, though no one's going to have a 1 x 2 terminal.
+
+  Mouse events are likely similar.
+*/
 void editLine(long extra, struct keyCommand *(*lineLoop)(long extra), void (*lineChar)(long extra, char *buffer), void (*lineCommand)(long extra, char *command, event *event))
 {
   struct pollfd pollfds[1];
@@ -2200,6 +2214,9 @@ struct context simpleJoe =
 // No cursor movement, just scrolling.
 // TODO - Put content into read only mode.
 // TODO - actually implement read only mode where up and down one line do actual scrolling instead of cursor movement.
+// TODO - maybe I can support the ZZ command in one of two ways -
+//          Just have a Z command do the quit.
+//          Have the first Z go into a special mode, where anything other than a Z restores the original mode.
 
 struct keyCommand simpleLessKeys[] =
 {
@@ -2209,7 +2226,7 @@ struct keyCommand simpleLessKeys[] =
   {"End",	"endOfLine"},
   {"q",		"quit"},
   {":q",	"quit"},	// TODO - A vi ism, should do ex command stuff instead.
-  {"ZZ",	"quit"},	// This one will suck.
+//  {"ZZ",	"quit"},	// The infrastructure here does not support this style of command.
   {"PgDn",	"downPage"},
   {"f",		"downPage"},
   {" ",		"downPage"},
@@ -2246,7 +2263,7 @@ struct keyCommand simpleMoreKeys[] =
   {"Return",	"downLine"},
   {"q",		"quit"},
   {":q",	"quit"},	// See comments for "less".
-  {"ZZ",	"quit"},	// See comments for "less".
+//  {"ZZ",	"quit"},	// See comments for "less".
   {"f",		"downPage"},
   {" ",		"downPage"},
   {"^F",	"downPage"},
