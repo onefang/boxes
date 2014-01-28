@@ -1068,6 +1068,25 @@ void drawContentLine(view *view, int y, int start, int end, char *left, char *in
   drawLine(y, start, end, left, internal, &(temp[offset]), right, current);
 }
 
+void updateLine(view *view)
+{
+  int y, len;
+
+  // Coz things might change out from under us, find the current view.  Again.
+  if (commandMode)	view = commandLine;
+  else		view = currentBox->view;
+
+  // TODO - When doing scripts and such, might want to turn off the line update until finished.
+  // Draw the prompt and the current line.
+  y = view->Y + (view->cY - view->offsetY);
+  len = strlen(view->prompt);
+  drawLine(y, view->X, view->X + view->W, "", " ", view->prompt, "", 0);
+  drawContentLine(view, y, view->X + len, view->X + view->W, "", " ", view->line->line, "", 1);
+  // Move the cursor.
+  printf("\x1B[%d;%dH", y + 1, view->X + len + (view->cX - view->offsetX) + 1);
+  fflush(stdout);
+}
+
 void doCommand(view *view, char *command)
 {
   if (command)
@@ -1081,23 +1100,8 @@ void doCommand(view *view, char *command)
       {
         if (functions[i].handler);
         {
-          int y, len;
-
           functions[i].handler(view);
-
-          // Coz things might change out from under us, find the current view.  Again.
-          if (commandMode)	view = commandLine;
-          else		view = currentBox->view;
-
-          // TODO - When doing scripts and such, might want to turn off the line update until finished.
-          // Draw the prompt and the current line.
-          y = view->Y + (view->cY - view->offsetY);
-          len = strlen(view->prompt);
-          drawLine(y, view->X, view->X + view->W, "", " ", view->prompt, "", 0);
-          drawContentLine(view, y, view->X + len, view->X + view->W, "", " ", view->line->line, "", 1);
-          // Move the cursor.
-          printf("\x1B[%d;%dH", y + 1, view->X + len + (view->cX - view->offsetX) + 1);
-          fflush(stdout);
+          updateLine(view);
         }
         break;
       }
@@ -1795,6 +1799,7 @@ static void lineChar(long extra, char *buffer)
   mooshStrings(view->line, buffer, view->iX, 0, !TT.overWriteMode);
   view->oW = formatLine(view, view->line->line, &(view->output));
   moveCursorRelative(view, strlen(buffer), 0, 0, 0);
+  updateLine(view);
 }
 
 static struct keyCommand * lineCommand(long extra, char *command)
@@ -1830,8 +1835,8 @@ The response from a terminal size check command includes a prefix, a suffix, wit
 void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct keyCommand * (*lineCommand)(long extra, char *command))
 {
   struct pollfd pollfds[1];
-  // Get the initial command set, and trigger the first cursor move.  Assumes the command set has a nop that otherwise does nothing.
-  struct keyCommand *ourKeys = lineCommand(extra, "nop");
+  // Get the initial command set.
+  struct keyCommand *ourKeys = lineCommand(extra, "");
   char buffer[20];
   char command[20];
   int pollcount = 1;
@@ -2717,6 +2722,8 @@ void boxes_main(void)
 
   calcBoxes(currentBox);
   drawBoxes(currentBox);
+  // Do the first cursor update.
+  updateLine(currentBox->view);
 
   // Run the main loop.
   editLine((long) currentBox->view, lineChar, lineCommand);
