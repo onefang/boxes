@@ -662,23 +662,6 @@ static box *currentBox;
 static view *commandLine;
 static int commandMode;
 
-void doCommand(struct function *functions, char *command, view *view)
-{
-  if (command)
-  {
-    int i;
-
-    for (i = 0; functions[i].name; i++)
-    {
-      if (strcmp(functions[i].name, command) == 0)
-      {
-        if (functions[i].handler);
-          functions[i].handler(view);
-        break;
-      }
-    }
-  }
-}
 
 #define MEM_SIZE  128	// Chunk size for line memory allocation.
 
@@ -1083,6 +1066,43 @@ void drawContentLine(view *view, int y, int start, int end, char *left, char *in
   if (offset > len)
     offset = len;
   drawLine(y, start, end, left, internal, &(temp[offset]), right, current);
+}
+
+void doCommand(view *view, char *command)
+{
+  if (command)
+  {
+    struct function *functions = view->content->context->commands;
+    int i;
+
+    for (i = 0; functions[i].name; i++)
+    {
+      if (strcmp(functions[i].name, command) == 0)
+      {
+        if (functions[i].handler);
+        {
+          int y, len;
+
+          functions[i].handler(view);
+
+          // Coz things might change out from under us, find the current view.  Again.
+          if (commandMode)	view = commandLine;
+          else		view = currentBox->view;
+
+          // TODO - When doing scripts and such, might want to turn off the line update until finished.
+          // Draw the prompt and the current line.
+          y = view->Y + (view->cY - view->offsetY);
+          len = strlen(view->prompt);
+          drawLine(y, view->X, view->X + view->W, "", " ", view->prompt, "", 0);
+          drawContentLine(view, y, view->X + len, view->X + view->W, "", " ", view->line->line, "", 1);
+          // Move the cursor.
+          printf("\x1B[%d;%dH", y + 1, view->X + len + (view->cX - view->offsetX) + 1);
+          fflush(stdout);
+        }
+        break;
+      }
+    }
+  }
 }
 
 int moveCursorAbsolute(view *view, long cX, long cY, long sX, long sY)
@@ -1717,7 +1737,7 @@ void executeLine(view *view)
   // Don't bother doing much if there's nothing on this line.
   if (result->line[0])
   {
-    doCommand(currentBox->view->content->context->commands, result->line, currentBox->view);
+    doCommand(currentBox->view, result->line);
     // If we are not at the end of the history contents.
     if (&(view->content->lines) != result->next)
     {
@@ -1756,7 +1776,7 @@ void quit(view *view)
   TT.stillRunning = 0;
 }
 
-void nop(box *box)
+void nop(view *view)
 {
   // 'tis a nop, don't actually do anything.
 }
@@ -1777,30 +1797,15 @@ static void lineChar(long extra, char *buffer)
   moveCursorRelative(view, strlen(buffer), 0, 0, 0);
 }
 
-// TODO - should merge this and the real one.  Note that when doing scripts and such, might want to turn off the line update until finished.
 static struct keyCommand * lineCommand(long extra, char *command)
 {
   struct _view *view = (struct _view *) extra;		// Though we pretty much stomp on this straight away.
-  int y, len;
 
   // Coz things might change out from under us, find the current view.
   if (commandMode)	view = commandLine;
   else		view = currentBox->view;
 
-  doCommand(view->content->context->commands, command, view);
-
-  // Coz things might change out from under us, find the current view.  Again
-  if (commandMode)	view = commandLine;
-  else		view = currentBox->view;
-
-  // Draw the prompt and the current line.
-  y = view->Y + (view->cY - view->offsetY);
-  len = strlen(view->prompt);
-  drawLine(y, view->X, view->X + view->W, "", " ", view->prompt, "", 0);
-  drawContentLine(view, y, view->X + len, view->X + view->W, "", " ", view->line->line, "", 1);
-  // Move the cursor.
-  printf("\x1B[%d;%dH", y + 1, view->X + len + (view->cX - view->offsetX) + 1);
-  fflush(stdout);
+  doCommand(view, command);
 
   // This is using the currentBox instead of view, coz the command line keys are part of the box context now, not separate.
   return currentBox->view->content->context->modes[currentBox->view->mode].keys;
@@ -1825,8 +1830,8 @@ The response from a terminal size check command includes a prefix, a suffix, wit
 void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct keyCommand * (*lineCommand)(long extra, char *command))
 {
   struct pollfd pollfds[1];
-  // Get the initial command set, and trigger the first cursor move.
-  struct keyCommand *ourKeys = lineCommand(extra, "");
+  // Get the initial command set, and trigger the first cursor move.  Assumes the command set has a nop that otherwise does nothing.
+  struct keyCommand *ourKeys = lineCommand(extra, "nop");
   char buffer[20];
   char command[20];
   int pollcount = 1;
@@ -1983,6 +1988,7 @@ struct function simpleEditCommands[] =
   {"endOfLine",		"Go to end of line.",			0, {endOfLine}},
   {"executeLine",	"Execute a line as a script.",		0, {executeLine}},
   {"leftChar",		"Move cursor left one character.",	0, {leftChar}},
+  {"nop",		"Do nothing.",				0, {nop}},
   {"quit",		"Quit the application.",		0, {quit}},
   {"rightChar",		"Move cursor right one character.",	0, {rightChar}},
   {"save",		"Save.",				0, {saveContent}},
@@ -2029,6 +2035,7 @@ struct keyCommand simpleCommandKeys[] =
 // readline uses these same commands, and defaults to emacs keystrokes.
 struct function simpleEmacsCommands[] =
 {
+  {"nop",		"Do nothing.",					0, {nop}},
   {"delete-backward-char",	"Back space last character.",		0, {backSpaceChar}},
   {"delete-window",		"Delete a box.",			0, {deleteBox}},
   {"delete-char",		"Delete current character.",		0, {deleteChar}},
@@ -2135,6 +2142,7 @@ struct context simpleEmacs =
 // TODO - Some of these might be wrong.  Just going by the inadequate joe docs for now.
 struct function simpleJoeCommands[] =
 {
+  {"nop",		"Do nothing.",			0, {nop}},
   {"backs",	"Back space last character.",		0, {backSpaceChar}},
   {"abort",	"Delete a box.",			0, {deleteBox}},
   {"delch",	"Delete current character.",		0, {deleteChar}},
@@ -2363,6 +2371,7 @@ struct context simpleMcedit =
 
 struct function simpleNanoCommands[] =
 {
+  {"nop",		"Do nothing.",				0, {nop}},
   {"backSpaceChar",	"Back space last character.",		0, {backSpaceChar}},
   {"delete",		"Delete current character.",		0, {deleteChar}},
   {"down",		"Move cursor down one line.",		0, {downLine}},
@@ -2497,6 +2506,8 @@ void viStartOfNextLine(view *view)
 // TODO - ex uses "shortest unique string" to match commands, should implement that, and do it for the other contexts to.
 struct function simpleViCommands[] =
 {
+  {"nop",		"Do nothing.",				0, {nop}},
+
   // These are actual ex commands.
   {"insert",		"Switch to insert mode.",		0, {viInsertMode}},
   {"quit",		"Quit the application.",		0, {quit}},
