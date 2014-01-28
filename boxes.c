@@ -305,22 +305,23 @@ struct key
 
 // This table includes some variations I have found on some terminals, and the MC "Esc digit" versions.
 // TODO - Don't think I got all the linux console variations.
-// TODO - Add more shift variations, plus Ctrl & Alt variations.
+// TODO - Add more shift variations, plus Ctrl & Alt variations when needed.
 // TODO - tmux messes with the shift function keys somehow.
-// TODO - Add other miscelany that does not use an escape sequence.  Including mouse events.
+// TODO - Add other miscelany that does not use an escape sequence.
+// TODO - maybe worth writing a proper CSI parse instead.  Would be useful for terminal size and mouse reports.
 
-// This is sorted to say which terminal is which, though there is some overlap.
+// This is sorted by type, though there is some overlap.
 // Human typing speeds wont need binary searching speeds on this small table.
 // So simple wins out over speed, and sorting by terminal type wins the simple test.
 struct key keys[] =
 {
   // Control characters.
 //  {"\x00",		"^@"},		// NUL Commented out coz it's the C string terminator, and may confuse things.
-  {"\x01",		"^A"},		// SOH
+  {"\x01",		"^A"},		// SOH Apparently sometimes sent as Home
   {"\x02",		"^B"},		// STX
   {"\x03",		"^C"},		// ETX SIGTERM
   {"\x04",		"^D"},		// EOT
-  {"\x05",		"^E"},		// ENQ
+  {"\x05",		"^E"},		// ENQ Apparently sometimes sent as End
   {"\x06",		"^F"},		// ACK
   {"\x07",		"^G"},		// BEL
   {"\x08",		"Del"},		// BS  Delete key, usually.
@@ -342,47 +343,23 @@ struct key keys[] =
   {"\x18",		"^X"},		// CAN
   {"\x19",		"^Y"},		// EM
   {"\x1A",		"^Z"},		// SUB
-//  {"\x1B",		"^["},		// ESC Esc key.  Commented out coz it's the ANSI start byte in the above multibyte keys.  Handled in the code with a timeout.
+//  {"\x1B",		"^["},		// ESC Esc key.  Commented out coz it's the ANSI start byte in the below multibyte keys.  Handled in the code with a timeout.
   {"\x1C",		"^\\"},		// FS SIGQUIT
   {"\x1D",		"^]"},		// GS
   {"\x1E",		"^^"},		// RS
   {"\x1F",		"^_"},		// US
-  {"\x7f",		"BS"},		// Backspace key, usually.  Ctrl-? perhaps?
+  {"\x7F",		"BS"},		// Backspace key, usually.  Ctrl-? perhaps?
+  {"\x9B",		"CSI"},		// CSI The eight bit encoding of "Esc [".
 
-  // TODO - sort these into terminal types, just for reference.
-  {"\x1B[3~",		"Del"},
+  // "Usual" xterm CSI sequences, with ";1" omitted for no modifiers.
+  {"\x1B[1~",		"Home"},	// Duplicate, think I've seen this somewhere.
   {"\x1B[2~",		"Ins"},
-  {"\x1B[D",		"Left"},
-  {"\x1BOD",		"Left"},
-  {"\x1B[C",		"Right"},
-  {"\x1BOC",		"Right"},
-  {"\x1B[A",		"Up"},
-  {"\x1BOA",		"Up"},
-  {"\x1B[B",		"Down"},
-  {"\x1BOB",		"Down"},
-  {"\x1B\x4f\x48",	"Home"},
-  {"\x1B[1~",		"Home"},
-  {"\x1B[7~",		"Home"},
-  {"\x1B[H",		"Home"},
-  {"\x1BOH",		"Home"},
-  {"\x1B\x4f\x46",	"End"},
-  {"\x1B[4~",		"End"},
-  {"\x1B[8~",		"End"},
-  {"\x1B[F",		"End"},
-  {"\x1BOF",		"End"},
-  {"\x1BOw",		"End"},
+  {"\x1B[3~",		"Del"},
+  {"\x1B[4~",		"End"},		// Duplicate, think I've seen this somewhere.
   {"\x1B[5~",		"PgUp"},
   {"\x1B[6~",		"PgDn"},
-  {"\x1B\x4F\x50",	"F1"},
-  {"\x1B\x4F\x51",	"F2"},
-  {"\x1B\x4F\x52",	"F3"},
-  {"\x1B\x4F\x53",	"F4"},
-
-  {"\x1BOP",		"F1"},
-  {"\x1BOO",		"F2"},
-  {"\x1BOR",		"F3"},
-  {"\x1BOS",		"F4"},
-
+  {"\x1B[7~",		"Home"},
+  {"\x1B[8~",		"End"},
   {"\x1B[11~",		"F1"},
   {"\x1B[12~",		"F2"},
   {"\x1B[13~",		"F3"},
@@ -396,16 +373,19 @@ struct key keys[] =
   {"\x1B[23~",		"F11"},
   {"\x1B[24~",		"F12"},
 
-  {"\x1B\x4f\x31;2P",	"Shift F1"},
-  {"\x1B\x4f\x31;2Q",	"Shift F2"},
-  {"\x1B\x4f\x31;2R",	"Shift F3"},
-  {"\x1B\x4f\x31;2S",	"Shift F4"},
-
-  {"\x1B[1;2P",		"Shift F1"},
-  {"\x1B[1;2Q",		"Shift F2"},
-  {"\x1B[1;2R",		"Shift F3"},
-  {"\x1B[1;2S",		"Shift F4"},
-
+  // As above, ";2" means shift modifier.
+  {"\x1B[1;2~",		"Shift Home"},
+  {"\x1B[2;2~",		"Shift Ins"},
+  {"\x1B[3;2~",		"Shift Del"},
+  {"\x1B[4;2~",		"Shift End"},
+  {"\x1B[5;2~",		"Shift PgUp"},
+  {"\x1B[6;2~",		"Shift PgDn"},
+  {"\x1B[7;2~",		"Shift Home"},
+  {"\x1B[8;2~",		"Shift End"},
+  {"\x1B[11;2~",	"Shift F1"},
+  {"\x1B[12;2~",	"Shift F2"},
+  {"\x1B[13;2~",	"Shift F3"},
+  {"\x1B[14;2~",	"Shift F4"},
   {"\x1B[15;2~",	"Shift F5"},
   {"\x1B[17;2~",	"Shift F6"},
   {"\x1B[18;2~",	"Shift F7"},
@@ -414,6 +394,59 @@ struct key keys[] =
   {"\x1B[21;2~",	"Shift F10"},
   {"\x1B[23;2~",	"Shift F11"},
   {"\x1B[24;2~",	"Shift F12"},
+
+  // Some terminals are special, and it seems they only have four function keys.
+  {"\x1B[A",		"Up"},
+  {"\x1B[B",		"Down"},
+  {"\x1B[C",		"Right"},
+  {"\x1B[D",		"Left"},
+  {"\x1B[F",		"End"},
+  {"\x1B[H",		"Home"},
+  {"\x1B[P",		"F1"},
+  {"\x1B[Q",		"F2"},
+  {"\x1B[R",		"F3"},
+  {"\x1B[S",		"F4"},
+  {"\x1B[1;2P",		"Shift F1"},
+  {"\x1B[1;2Q",		"Shift F2"},
+  {"\x1B[1;2R",		"Shift F3"},
+  {"\x1B[1;2S",		"Shift F4"},
+
+  // Not sure what this odd collection is.
+  {"\x1BOA",		"Up"},
+  {"\x1BOB",		"Down"},
+  {"\x1BOC",		"Right"},
+  {"\x1BOD",		"Left"},
+  {"\x1BOF",		"End"},
+  {"\x1BOH",		"Home"},
+  {"\x1BOn",		"Del"},
+  {"\x1BOp",		"Ins"},
+  {"\x1BOq",		"End"},
+  {"\x1BOw",		"Home"},
+  {"\x1BOP",		"F1"},
+  {"\x1BOO",		"F2"},
+  {"\x1BOR",		"F3"},
+  {"\x1BOS",		"F4"},
+  {"\x1BOT",		"F5"},
+  // These two conflict with the above four function key variation.
+  {"\x1B[R",		"F6"},
+  {"\x1B[S",		"F7"},
+  {"\x1B[T",		"F8"},
+  {"\x1B[U",		"F9"},
+  {"\x1B[V",		"F10"},
+  {"\x1B[W",		"F11"},
+  {"\x1B[X",		"F12"},
+
+  // Can't remember, but saw them somewhere.
+  {"\x1B\x4f\x46",	"End"},
+  {"\x1B\x4f\x48",	"Home"},
+  {"\x1B\x4F\x50",	"F1"},
+  {"\x1B\x4F\x51",	"F2"},
+  {"\x1B\x4F\x52",	"F3"},
+  {"\x1B\x4F\x53",	"F4"},
+  {"\x1B\x4f\x31;2P",	"Shift F1"},
+  {"\x1B\x4f\x31;2Q",	"Shift F2"},
+  {"\x1B\x4f\x31;2R",	"Shift F3"},
+  {"\x1B\x4f\x31;2S",	"Shift F4"},
 
   // MC "Esc digit" specials.
   // NOTE - The MC Esc variations might not be such a good idea, other programs want the Esc key for other things.
