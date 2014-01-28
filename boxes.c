@@ -1908,6 +1908,7 @@ void editLine(long extra, struct keyCommand *(*lineLoop)(long extra), void (*lin
         }
         else if (j == 0)    // End of file.
         {
+          TT.stillRunning = 0;
           fprintf(stderr, "EOF\n");
           fflush(stderr);
         }
