@@ -178,6 +178,15 @@ GLOBALS(
  * So use sixteen bits for storing screen positions and the like.
  * Eight bits wont cut it.
  *
+ *
+ * These are the escape sequences we send -
+ *    \x1B[m		reset attributes and colours
+ *    \x1B[1m		turn on bold
+ *    \x1B[%d;%dH	move cursor
+ * Plus some experimentation with turning on mouse reporting that's not
+ * currently used.
+ *
+ *
  * TODO - disentangle boxes from views.
  *
  * TODO - Show status line instead of command line when it's not being edited.
