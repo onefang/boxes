@@ -1741,15 +1741,57 @@ void nop(box *box, event *event)
 }
 
 
+static struct keyCommand *lineLoop(long extra)
+{
+  struct _view *view = (struct _view *) extra;		// Though we pretty much stomp on this straight away.
+  int y, len;
+
+  // Coz things might change out from under us, find the current view.
+  if (commandMode)	view = commandLine;
+  else		view = currentBox->view;
+  // Draw the prompt and the current line.
+  y = view->Y + (view->cY - view->offsetY);
+  len = strlen(view->prompt);
+  drawLine(y, view->X, view->X + view->W, "", " ", view->prompt, "", 0);
+  drawContentLine(view, y, view->X + len, view->X + view->W, "", " ", view->line->line, "", 1);
+  // Move the cursor.
+  printf("\x1B[%d;%dH", y + 1, view->X + len + (view->cX - view->offsetX) + 1);
+  fflush(stdout);
+
+  // This is using the currentBox instead of view, coz the command line keys are part of the box context now, not separate.
+  // More importantly, the currentBox may change due to a command.
+  return currentBox->view->content->context->modes[currentBox->view->mode].keys;
+}
+
+static void lineChar(long extra, char *buffer)
+{
+  struct _view *view = (struct _view *) extra;		// Though we pretty much stomp on this straight away.
+
+  // Coz things might change out from under us, find the current view.
+  if (commandMode)	view = commandLine;
+  else		view = currentBox->view;
+  // TODO - Should check for tabs to, and insert them.
+  //        Though better off having a function for that?
+  // TODO - see if I can get these out of here.  Some sort of pushCharacter(buffer, blob) that is passed in.
+  mooshStrings(view->line, buffer, view->iX, 0, !TT.overWriteMode);
+  view->oW = formatLine(view, view->line->line, &(view->output));
+  moveCursorRelative(view, strlen(buffer), 0, 0, 0);
+}
+
+static void lineCommand(long extra, char *command, event *event)
+{
+  struct _view *view = (struct _view *) extra;		// Though we pretty much stomp on this straight away.
+
+  // Coz things might change out from under us, find the current view.
+  if (commandMode)	view = commandLine;
+  else		view = currentBox->view;
+  doCommand(view->content->context->commands, command, view, event);
+}
+
 // Basically this is the main loop.
 
-// X and Y are screen coords.
-// W and H are the size of the editLine.  EditLine will start one line high, and grow to a maximum of H if needed, then start to scroll.
-// H more than one means the editLine can grow upwards, unless it's at the top of the box / screen, then it has to grow downwards.
-// X, Y, W, and H can be -1, which means to grab suitable numbers from the views box.
-void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
+void editLine(long extra, struct keyCommand *(*lineLoop)(long extra), void (*lineChar)(long extra, char *buffer), void (*lineCommand)(long extra, char *command, event *event))
 {
-  struct termios termio, oldtermio;
   struct pollfd pollfds[1];
   char buffer[20];
   char command[20];
@@ -1762,56 +1804,15 @@ void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
   buffer[0] = 0;
   command[0] = 0;
 
-  if (view->box)
-    sizeViewToBox(view->box, X, Y, W, H);
-  // Assumes the view was already setup if it's not part of a box.
-
-  // All the mouse tracking methods suck one way or another.  sigh
-  // Enable mouse (VT200 normal tracking mode, UTF8 encoding).  The limit is 2015.  Seems to only be in later xterms.
-//  printf("\x1B[?1005h");
-  // Enable mouse (DEC locator reporting mode).  In theory has no limit.  Wont actually work though.
-  // On the other hand, only allows for four buttons, so only half a mouse wheel.
-//  printf("\x1B[1;2'z\x1B[1;3'{");
-  // Enable mouse (VT200 normal tracking mode).  Has a limit of 256 - 32 rows and columns.  An xterm exclusive I think, but works in roxterm at least.
-  printf("\x1B[?1000h");
-  fflush(stdout);
-  // TODO - Should remember to turn off mouse reporting when we leave.
-
-  // Grab the old terminal settings and save it.
-  tcgetattr(0, &oldtermio);
-  tcflush(0, TCIFLUSH);
-  termio = oldtermio;
-
-  // Mould the terminal to our will.
-  termio.c_iflag &= ~(IUCLC|IXON|IXOFF|IXANY);
-  termio.c_lflag &= ~(ECHO|ECHOE|ECHOK|ECHONL|TOSTOP|ICANON);
-  termio.c_cc[VTIME]=0;  // deciseconds.
-  termio.c_cc[VMIN]=1;
-  tcsetattr(0, TCSANOW, &termio);
-
-  calcBoxes(currentBox);
-  drawBoxes(currentBox);
-
   // TODO - OS buffered keys might be a problem, but we can't do the usual timestamp filter for now.
+  TT.stillRunning = 1;
   while (TT.stillRunning)
   {
-    // TODO - We can reuse one or two of these to have less of them.
-    int j = 0, p, ret, y, len;
-
-    // This is using the currentBox instead of view, coz the command line keys are part of the box context now, not separate.
-    // More importantly, the currentBox may change due to a command.
-    struct keyCommand *ourKeys = currentBox->view->content->context->modes[currentBox->view->mode].keys;
-
-    // Coz things might change out from under us, find the current view.
-    // TODO - see if I can get this lot out of here.
-    if (commandMode)	view = commandLine;
-    else		view = currentBox->view;
-    y = view->Y + (view->cY - view->offsetY);
-    len = strlen(view->prompt);
-    drawLine(y, view->X, view->X + view->W, "\0", " ", view->prompt, '\0', 0);
-    drawContentLine(view, y, view->X + len, view->X + view->W, "\0", " ", view->line->line, '\0', 1);
-    printf("\x1B[%d;%dH", y + 1, view->X + len + (view->cX - view->offsetX) + 1);
-    fflush(stdout);
+    int j, p;
+    char *found = NULL;
+    // We do this coz the command set might change out from under us in response to commands.
+    // So lineLoop should return the current command set if nothing else.
+    struct keyCommand *ourKeys = lineLoop(extra);
 
     // Apparently it's more portable to reset this each time.
     memset(pollfds, 0, pollcount * sizeof(struct pollfd));
@@ -1832,7 +1833,7 @@ void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
         index = 0;
         buffer[0] = 0;
       }
-      // TODO - Send a timer event somewhere.  This wont be a precise timed event, but don't think we need one.
+      // TODO - Send a timer event to lineCommand().  This wont be a precise timed event, but don't think we need one.
     }
 
     while (0 < p)
@@ -1842,21 +1843,21 @@ void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
       {
         // I am assuming that we get the input atomically, each multibyte key fits neatly into one read.
         // If that's not true (which is entirely likely), then we have to get complicated with circular buffers and stuff, or just one byte at a time.
-        ret = read(pollfds[p].fd, &buffer[index], sizeof(buffer) - (index + 1));
-        if (ret < 0)      // An error happened.
+        j = read(pollfds[p].fd, &buffer[index], sizeof(buffer) - (index + 1));
+        if (j < 0)      // An error happened.
         {
           // For now, just ignore errors.
           fprintf(stderr, "input error on %d\n", p);
           fflush(stderr);
         }
-        else if (ret == 0)    // End of file.
+        else if (j == 0)    // End of file.
         {
           fprintf(stderr, "EOF\n");
           fflush(stderr);
         }
         else
         {
-          index += ret;
+          index += j;
           if (sizeof(buffer) < (index + 1))  // Ran out of buffer.
           {
             fprintf(stderr, "Full buffer - %s  ->  %s\n", buffer, command);
@@ -1873,7 +1874,7 @@ void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
 
     // For a real timeout checked Esc, buffer is now empty, so this for loop wont find it anyway.
     // While it's true we could avoid it by checking, the user already had to wait for a time out, and this loop wont take THAT long.
-    for (j = 0; keys[j].code; j++)    // Search for multibyte keys and some control keys.
+    for (j = 0; keys[j].code; j++)    // Search for multibyte keys and control keys.
     {
       if (strcmp(keys[j].code, buffer) == 0)
       {
@@ -1887,42 +1888,26 @@ void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
     // See if it's an ordinary key,
     if ((1 == index) && isprint(buffer[0]))
     {
-      int visucks = 0;
-
-      // Here we want to pass it to the command finder first, and only "insert" it if it's not a command.
-      // Less and more have the "ZZ" command, but nothing else seems to have multi ordinary character commands.
-      // Less and more also have some ordinary character commands, mostly vi like.
+      // Here we want to run it through the command finder first, and only "insert" it if it's not a command.
       for (j = 0; ourKeys[j].key; j++)
       {
-        // Yes, that's right, we are scanning ourKeys twice, coz vi.
-        // TODO - We can wriggle out of this later by bumping visucks up a scope and storing a pointer to ourKeys[j].command.
-        //          In fact, visucks could be that pointer.
         if (strcmp(ourKeys[j].key, buffer) == 0)
         {
           strcpy(command, buffer);
-          visucks = 1;
+          found = command;
           break;
         }
       }
-      // If there's an outstanding command, add this to the end of it.
-      if (!visucks)
+      if (NULL == found)
       {
+        // If there's an outstanding command, add this to the end of it.
         if (command[0])  strcat(command, buffer);
-        else
-        {
-          // TODO - Should check for tabs to, and insert them.
-          //        Though better off having a function for that?
-          // TODO - see if I can get these out of here.  Some sort of pushCharacter(buffer, blob) that is passed in.
-          mooshStrings(view->line, buffer, view->iX, 0, !TT.overWriteMode);
-          view->oW = formatLine(view, view->line->line, &(view->output));
-          moveCursorRelative(view, strlen(buffer), 0, 0, 0);
-        }
+        else             lineChar(extra, buffer);
       }
       index = 0;
       buffer[0] = 0;
     }
 
-    // TODO - If the view->context has an event handler, use it, otherwise look up the specific event handler in the context modes ourselves.
     if (command[0])        // Search for a bound key.
     {
       if (sizeof(command) < (strlen(command) + 1))
@@ -1932,21 +1917,25 @@ void editLine(view *view, int16_t X, int16_t Y, int16_t W, int16_t H)
         command[0] = 0;
       }
 
-      for (j = 0; ourKeys[j].key; j++)
+      if (NULL == found)
       {
-        if (strcmp(ourKeys[j].key, command) == 0)
+        for (j = 0; ourKeys[j].key; j++)
         {
-          doCommand(view->content->context->commands, ourKeys[j].command, view, NULL);
-          command[0] = 0;
-          break;
+          if (strcmp(ourKeys[j].key, command) == 0)
+          {
+            found = ourKeys[j].command;
+            break;
+          }
         }
       }
+      if (found)
+      {
+        // That last argument, an event pointer, should be the original raw keystrokes, though by this time that's been cleared.
+        lineCommand(extra, found, NULL);
+        command[0] = 0;
+      }
     }
-
   }
-
-  // Restore the old terminal settings.
-  tcsetattr(0, TCSANOW, &oldtermio);
 }
 
 
@@ -2591,21 +2580,9 @@ struct context simpleVi =
 void boxes_main(void)
 {
   struct context *context = &simpleMcedit;  // The default is mcedit, coz that's what I use.
+  struct termios termio, oldtermio;
   char *prompt = "Enter a command : ";
   unsigned W = 80, H = 24;
-
-  // TODO - Should do an isatty() here, though not sure about the usefullness of driving this from a script or redirected input, since it's supposed to be a UI for terminals.
-  //          It would STILL need the terminal size for output though.  Perhaps just bitch and abort if it's not a tty?
-  //          On the other hand, sed don't need no stinkin' UI.  And things like more or less should be usable on the end of a pipe.
-
-  // TODO - set up a handler for SIGWINCH to find out when the terminal has been resized.
-  terminal_size(&W, &H);
-  if (toys.optflags & FLAG_w)
-    W = TT.w;
-  if (toys.optflags & FLAG_h)
-    H = TT.h;
-
-  TT.stillRunning = 1;
 
   // For testing purposes, figure out which context we use.  When this gets real, the toybox multiplexer will sort this out for us instead.
   if (toys.optflags & FLAG_m)
@@ -2626,8 +2603,48 @@ void boxes_main(void)
       context = &simpleVi;
   }
 
+  // TODO - Should do an isatty() here, though not sure about the usefullness of driving this from a script or redirected input, since it's supposed to be a UI for terminals.
+  //          It would STILL need the terminal size for output though.  Perhaps just bitch and abort if it's not a tty?
+  //          On the other hand, sed don't need no stinkin' UI.  And things like more or less should be usable on the end of a pipe.
+
+  // Grab the old terminal settings and save it.
+  tcgetattr(0, &oldtermio);
+  tcflush(0, TCIFLUSH);
+  termio = oldtermio;
+
+  // Mould the terminal to our will.
+  /*
+    IUCLC	(not in POSIX) Map uppercase characters to lowercase on input.
+    IXON	Enable XON/XOFF flow control on output.
+    IXOFF	Enable XON/XOFF flow control on input.
+    IXANY	(not in POSIX.1; XSI) Enable any character to restart output.
+
+    ECHO	Echo input characters.
+    ECHOE	If ICANON is also set, the ERASE character erases the preceding input character, and WERASE erases the preceding word.
+    ECHOK	If ICANON is also set, the KILL character erases the current line. 
+    ECHONL	If ICANON is also set, echo the NL character even if ECHO is not set. 
+    TOSTOP	Send the SIGTTOU signal to the process group of a background process which tries to write to its controlling terminal.
+    ICANON	Enable canonical mode. This enables the special characters EOF, EOL, EOL2, ERASE, KILL, LNEXT, REPRINT, STATUS, and WERASE, and buffers by lines. 
+
+    VTIME	Timeout in deciseconds for non-canonical read. 
+    VMIN	Minimum number of characters for non-canonical read.
+  */
+  termio.c_iflag &= ~(IUCLC|IXON|IXOFF|IXANY);
+  termio.c_lflag &= ~(ECHO|ECHOE|ECHOK|ECHONL|TOSTOP|ICANON);
+  termio.c_cc[VTIME]=0;  // deciseconds.
+  termio.c_cc[VMIN]=1;
+  tcsetattr(0, TCSANOW, &termio);
+
+  // TODO - set up a handler for SIGWINCH to find out when the terminal has been resized.
+  terminal_size(&W, &H);
+  if (toys.optflags & FLAG_w)
+    W = TT.w;
+  if (toys.optflags & FLAG_h)
+    H = TT.h;
+
   // Create the main box.  Right now the system needs one for wrapping around while switching.  The H - 1 bit is to leave room for our example command line.
   rootBox = addBox("root", context, toys.optargs[0], 0, 0, W, H - 1);
+  currentBox = rootBox;
 
   // Create the command line view, sharing the same context as the root.  It will differentiate based on the view mode of the current box.
   // Also load the command line history as it's file.
@@ -2639,9 +2656,29 @@ void boxes_main(void)
   // Move to the end of the history.
   moveCursorAbsolute(commandLine, 0, commandLine->content->lines.length, 0, 0);
 
+  // All the mouse tracking methods suck one way or another.  sigh
+  // http://leonerds-code.blogspot.co.uk/2012/04/wide-mouse-support-in-libvterm.html is helpful.
+  // Enable mouse (VT200 normal tracking mode, UTF8 encoding).  The limit is 2015.  Seems to only be in later xterms.
+//  printf("\x1B[?1005h");
+  // Enable mouse (VT340 locator reporting mode).  In theory has no limit.  Wont actually work though.
+  // On the other hand, only allows for four buttons, so only half a mouse wheel.
+  // Responds with "\1B[e;p;r;c;p&w" where e is event type, p is a bitmap of buttons pressed, r and c are the mouse coords in decimal, and p is the "page number".
+//  printf("\x1B[1;2'z\x1B[1;3'{");
+  // Enable mouse (VT200 normal tracking mode).  Has a limit of 256 - 32 rows and columns.  An xterm exclusive I think, but works in roxterm at least.  No wheel reports.
+  // Responds with "\x1B[Mbxy" where x and y are the mouse coords, and b is bit encoded buttons and modifiers - 0=MB1 pressed, 1=MB2 pressed, 2=MB3 pressed, 3=release, 4=Shift, 8=Meta, 16=Control
+  printf("\x1B[?1000h");
+  fflush(stdout);
+
+  calcBoxes(currentBox);
+  drawBoxes(currentBox);
+
   // Run the main loop.
-  currentBox = rootBox;
-  editLine(currentBox->view, -1, -1, -1, -1);
+  editLine((long) currentBox->view, lineLoop, lineChar, lineCommand);
+
+  // TODO - Should remember to turn off mouse reporting when we leave.
+
+  // Restore the old terminal settings.
+  tcsetattr(0, TCSANOW, &oldtermio);
 
   puts("\n");
   fflush(stdout);
