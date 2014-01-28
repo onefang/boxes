@@ -1783,7 +1783,23 @@ void nop(box *box, event *event)
 }
 
 
-static struct keyCommand *lineLoop(long extra)
+static void lineChar(long extra, char *buffer)
+{
+  struct _view *view = (struct _view *) extra;		// Though we pretty much stomp on this straight away.
+
+  // Coz things might change out from under us, find the current view.
+  if (commandMode)	view = commandLine;
+  else		view = currentBox->view;
+
+  // TODO - Should check for tabs to, and insert them.
+  //        Though better off having a function for that?
+  mooshStrings(view->line, buffer, view->iX, 0, !TT.overWriteMode);
+  view->oW = formatLine(view, view->line->line, &(view->output));
+  moveCursorRelative(view, strlen(buffer), 0, 0, 0);
+}
+
+// TODO - should merge this and the real one.  Note that when doing scripts and such, might want to turn off the line update until finished.
+static struct keyCommand * lineCommand(long extra, char *command, event *event)
 {
   struct _view *view = (struct _view *) extra;		// Though we pretty much stomp on this straight away.
   int y, len;
@@ -1791,6 +1807,13 @@ static struct keyCommand *lineLoop(long extra)
   // Coz things might change out from under us, find the current view.
   if (commandMode)	view = commandLine;
   else		view = currentBox->view;
+
+  doCommand(view->content->context->commands, command, view, event);
+
+  // Coz things might change out from under us, find the current view.  Again
+  if (commandMode)	view = commandLine;
+  else		view = currentBox->view;
+
   // Draw the prompt and the current line.
   y = view->Y + (view->cY - view->offsetY);
   len = strlen(view->prompt);
@@ -1801,33 +1824,7 @@ static struct keyCommand *lineLoop(long extra)
   fflush(stdout);
 
   // This is using the currentBox instead of view, coz the command line keys are part of the box context now, not separate.
-  // More importantly, the currentBox may change due to a command.
   return currentBox->view->content->context->modes[currentBox->view->mode].keys;
-}
-
-static void lineChar(long extra, char *buffer)
-{
-  struct _view *view = (struct _view *) extra;		// Though we pretty much stomp on this straight away.
-
-  // Coz things might change out from under us, find the current view.
-  if (commandMode)	view = commandLine;
-  else		view = currentBox->view;
-  // TODO - Should check for tabs to, and insert them.
-  //        Though better off having a function for that?
-  // TODO - see if I can get these out of here.  Some sort of pushCharacter(buffer, blob) that is passed in.
-  mooshStrings(view->line, buffer, view->iX, 0, !TT.overWriteMode);
-  view->oW = formatLine(view, view->line->line, &(view->output));
-  moveCursorRelative(view, strlen(buffer), 0, 0, 0);
-}
-
-static void lineCommand(long extra, char *command, event *event)
-{
-  struct _view *view = (struct _view *) extra;		// Though we pretty much stomp on this straight away.
-
-  // Coz things might change out from under us, find the current view.
-  if (commandMode)	view = commandLine;
-  else		view = currentBox->view;
-  doCommand(view->content->context->commands, command, view, event);
 }
 
 // Basically this is the main loop.
@@ -1846,9 +1843,11 @@ The response from a terminal size check command includes a prefix, a suffix, wit
 
   Mouse events are likely similar.
 */
-void editLine(long extra, struct keyCommand *(*lineLoop)(long extra), void (*lineChar)(long extra, char *buffer), void (*lineCommand)(long extra, char *command, event *event))
+void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct keyCommand * (*lineCommand)(long extra, char *command, event *event))
 {
   struct pollfd pollfds[1];
+  // Get the initial command set, and trigger the first cursor move.
+  struct keyCommand *ourKeys = lineCommand(extra, "", NULL);
   char buffer[20];
   char command[20];
   int pollcount = 1;
@@ -1866,9 +1865,6 @@ void editLine(long extra, struct keyCommand *(*lineLoop)(long extra), void (*lin
   {
     int j, p;
     char *found = NULL;
-    // We do this coz the command set might change out from under us in response to commands.
-    // So lineLoop should return the current command set if nothing else.
-    struct keyCommand *ourKeys = lineLoop(extra);
 
     // Apparently it's more portable to reset this each time.
     memset(pollfds, 0, pollcount * sizeof(struct pollfd));
@@ -1876,6 +1872,7 @@ void editLine(long extra, struct keyCommand *(*lineLoop)(long extra), void (*lin
     pollfds[0].fd = 0;
 
 // TODO - A bit unstable at the moment, something makes it go into a horrid CPU eating edit line flicker mode sometimes.  And / or vi mode can crash on exit (stack smash).
+//          This might be fixed now.
 
     // TODO - Should only ask for a time out after we get an Escape.
     p = poll(pollfds, pollcount, 100);    // Timeout of one tenth of a second (100).
@@ -1988,7 +1985,7 @@ void editLine(long extra, struct keyCommand *(*lineLoop)(long extra), void (*lin
       if (found)
       {
         // That last argument, an event pointer, should be the original raw keystrokes, though by this time that's been cleared.
-        lineCommand(extra, found, NULL);
+        ourKeys = lineCommand(extra, found, NULL);
         command[0] = 0;
       }
     }
@@ -2733,7 +2730,7 @@ void boxes_main(void)
   drawBoxes(currentBox);
 
   // Run the main loop.
-  editLine((long) currentBox->view, lineLoop, lineChar, lineCommand);
+  editLine((long) currentBox->view, lineChar, lineCommand);
 
   // TODO - Should remember to turn off mouse reporting when we leave.
 
