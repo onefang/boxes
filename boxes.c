@@ -1891,6 +1891,8 @@ void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct key
         {
           TT.stillRunning = 0;
           fprintf(stderr, "EOF\n");
+          for (j = 0; buffer[j + 1]; j++)
+            fprintf(stderr, "(%x), ", (int) buffer[j]);
           fflush(stderr);
         }
         else
