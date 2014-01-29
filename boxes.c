@@ -2501,16 +2501,12 @@ struct keyCommand simpleMceditKeys[] =
   {"PgUp",	"upPage"},
   {"Return",	"splitLine"},
   {"Right",	"rightChar"},
-  {"Shift F2",	"switchMode"},	// MC doesn't have a command mode.
-{"F3",	"switchMode"},	// Coz tmux is screwing with the shift function keys somehow.
-  {"^[x",	"switchMode"},	// Emacs like.
-  {"^[:",	"switchMode"},	// Sorta vi like.
-  {"^Q|",	"splitV"},	// MC doesn't have a split window concept, so make these up to match tmux more or less.
-  {"^Q-",	"splitH"},
-  {"^Qo",	"switchBoxes"},
-  {"^Q^O",	"switchBoxes"},
-  {"^Qx",	"deleteBox"},
-  {"^Q^X",	"deleteBox"},
+{"Shift F2",	"switchMode"},	// MC doesn't have a command mode.
+  {"^[:",	"switchMode"},	// Sorta vi like, and coz tmux is screwing with the shift function keys somehow.
+  {"^[|",	"splitV"},	// MC doesn't have a split window concept, so make these up to match tmux more or less.
+  {"^[-",	"splitH"},
+  {"^[o",	"switchBoxes"},
+  {"^[x",	"deleteBox"},
   {"Up",	"upLine"},
   {NULL, NULL}
 };
