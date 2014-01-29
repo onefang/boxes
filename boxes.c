@@ -2337,6 +2337,7 @@ struct keyCommand simpleMceditKeys[] =
   {"Return",	"splitLine"},
   {"Right",	"rightChar"},
   {"Shift F2",	"switchMode"},	// MC doesn't have a command mode.
+{"F3",	"switchMode"},	// Coz tmux is screwing with the shift function keys somehow.
   {"^[x",	"switchMode"},	// Emacs like.
   {"^[:",	"switchMode"},	// Sorta vi like.
   {"^Q|",	"splitV"},	// MC doesn't have a split window concept, so make these up to match tmux more or less.
