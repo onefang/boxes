@@ -196,10 +196,10 @@ GLOBALS(
  *
  * TODO - disentangle boxes from views.
  *
- * TODO - Show status line instead of command line when it's not being edited.
- *
  * TODO - should split this up into editing, UI, and boxes parts,
  * so the developer can leave out bits they are not using.
+ *
+ * TODO - Show status line instead of command line when it's not being edited.
  *
  * TODO - should review it all for UTF8 readiness.  Think I can pull that off
  * by keeping everything on the output side as "screen position", and using
@@ -951,8 +951,8 @@ void formatCheckCursor(view *view, long *cX, long *cY, char *input)
 }
 
 // TODO - Should convert control characters to reverse video, and deal with UTF8.
-/* FIXME - We get passed a NULL input, apparently when the file length is close to the screen length. -
 
+/* FIXME - We get passed a NULL input, apparently when the file length is close to the screen length. -
 > On Thu, 6 Sep 2012 11:56:17 +0800 Roy Tam <roytam@gmail.com> wrote:
 >   
 > > 2012/9/6 David Seikel <onefang@gmail.com>:  
@@ -1821,16 +1821,6 @@ static struct keyCommand * lineCommand(long extra, char *command)
   return currentBox->view->content->context->modes[currentBox->view->mode].keys;
 }
 
-// Basically this is the main loop.
-
-/*  Unhandled complications -
-Less and more have the "ZZ" command, but nothing else seems to have multi ordinary character commands.
-
-Some editors have a shortcut command concept.  The smallest unique first part of each command will match, as well as anything longer.
-  A further complication is if we are not implementing some commands that might change what is "shortest unique prefix".
-*/
-
-
 char *termSize(long extra, int *params, int count)
 {
   struct _view *view = (struct _view *) extra;		// Though we pretty much stomp on this straight away.
@@ -1870,6 +1860,15 @@ struct CSI CSI_terminators[] =
   {"R", termSize},	// Parameters are cursor line and column.  Note this may be sent at other times, not just during terminal resize.
   {NULL, NULL}
 };
+
+// Basically this is the main loop.
+
+/*  Unhandled complications -
+Less and more have the "ZZ" command, but nothing else seems to have multi ordinary character commands.
+
+Some editors have a shortcut command concept.  The smallest unique first part of each command will match, as well as anything longer.
+  A further complication is if we are not implementing some commands that might change what is "shortest unique prefix".
+*/
 
 void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct keyCommand * (*lineCommand)(long extra, char *command))
 {
@@ -2015,12 +2014,12 @@ void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct key
     {
       /* ECMA-048 section 5.2 defines this, and is unreadable.
 	General CSI format - CSI [private] n1 ; n2 [extra] final
-	    private	0x3c to 0x3f  [<=>?] if first byte is one of these, this is a private command, if it's one of the other n1 ones, it's not private.
-	    n1		0x30 to 0x3f  [01234567890:;<=>?] ASCII digits forming a "number"
+	    private	0x3c to 0x3f  "<=>?" if first byte is one of these, this is a private command, if it's one of the other n1 ones, it's not private.
+	    n1		0x30 to 0x3f  "01234567890:;<=>?" ASCII digits forming a "number"
 			0x3a [:] used for floats, not expecting any.  Could also be used as some other sort of inter digit separator.
 			0x3b [;] separates the parameters
-	    extra	0x20 to 0x2f  [  !"#$%&'()*+,-./]  Can be multiple, likely isn't.
-	    final	0x40 to 0x7e  "@A .. Z[\]^_`a .. z{|}~" it's private if 0x70 to 0x7e [p ..z{|}~]
+	    extra	0x20 to 0x2f  [ !"#$%&'()*+,-./]  Can be multiple, likely isn't.
+	    final	0x40 to 0x7e  "@A .. Z[\]^_`a .. z{|}~" it's private if 0x70 to 0x7e "p .. z{|}~"
 		Though the "private" ~ is used for key codes.
 		    We also have SS3 "\x1BO" for other keys, but that's not a CSI.
 	  C0 controls, DEL (0x7f), or high characters are undefined.
@@ -2195,7 +2194,8 @@ struct keyCommand simpleCommandKeys[] =
 };
 
 
-// TODO - simple emacs editor.
+// Construct a simple emacs editor.
+
 // Mostly control keys, some meta keys.
 // Ctrl-h and Ctrl-x have more keys in the commands.  Some of those extra keys are commands by themselves.  Up to "Ctrl-x 4 Ctrl-g" which apparently is identical to just Ctrl-g.  shrugs
 //   Ctrl-h is backspace / del.  Pffft.
@@ -2422,7 +2422,7 @@ struct keyCommand simpleLessKeys[] =
   {"End",	"endOfLine"},
   {"q",		"quit"},
   {":q",	"quit"},	// TODO - A vi ism, should do ex command stuff instead.
-//  {"ZZ",	"quit"},	// The infrastructure here does not support this style of command.
+  {"ZZ",	"quit"},	// The infrastructure here does not support this style of command.
   {"PgDn",	"downPage"},
   {"f",		"downPage"},
   {" ",		"downPage"},
@@ -2459,7 +2459,7 @@ struct keyCommand simpleMoreKeys[] =
   {"Return",	"downLine"},
   {"q",		"quit"},
   {":q",	"quit"},	// See comments for "less".
-//  {"ZZ",	"quit"},	// See comments for "less".
+  {"ZZ",	"quit"},	// See comments for "less".
   {"f",		"downPage"},
   {" ",		"downPage"},
   {"^F",	"downPage"},
@@ -2871,9 +2871,9 @@ void boxes_main(void)
     PARENB	enable parity
     CS8		8 bit characters
 
-    VEOF	"sends" EOF on ^D
+    VEOF	"sends" EOF on ^D, ICANON turns that on.
     VSTART	restart output on ^Q, IXON turns that on.
-    VSTATUS	display status info and sends SIGINFO on ^T.  Not in POSIX, not supported in Linux.  Does not seem to be any method of turning it off where it is supported.
+    VSTATUS	display status info and sends SIGINFO (STATUS) on ^T.  Not in POSIX, not supported in Linux.  ICANON turns that on.
     VSTOP	stop output on ^S, IXON turns that on.
   */
   termio.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IUCLC | IXON | IXOFF | IXANY);
