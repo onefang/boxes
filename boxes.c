@@ -468,7 +468,7 @@ an array, you can do sizeof(table)/sizeof(*table). Divide the size of
 the table (in bytes) by the size of a member of the table (in bytes) to  
 get the number of entries.
 
-I should try that trick.
+I should try that trick.  Seems to work, let's do that everywhere.
 */
 
   {NULL, NULL}
@@ -1822,8 +1822,6 @@ Less and more have the "ZZ" command, but nothing else seems to have multi ordina
 
 Some editors have a shortcut command concept.  The smallest unique first part of each command will match, as well as anything longer.
   A further complication is if we are not implementing some commands that might change what is "shortest unique prefix".
-
-  response is "\x1B[ ; R", where the spaces are replaced by digits LINES and COLUMNS respectively.
 */
 
 
@@ -2182,7 +2180,7 @@ struct keyCommand simpleCommandKeys[] =
 // readline uses these same commands, and defaults to emacs keystrokes.
 struct function simpleEmacsCommands[] =
 {
-  {"nop",		"Do nothing.",					0, {nop}},
+  {"nop",			"Do nothing.",				0, {nop}},
   {"delete-backward-char",	"Back space last character.",		0, {backSpaceChar}},
   {"delete-window",		"Delete a box.",			0, {deleteBox}},
   {"delete-char",		"Delete current character.",		0, {deleteChar}},
@@ -2191,7 +2189,7 @@ struct function simpleEmacsCommands[] =
   {"end-of-line",		"Go to end of line.",			0, {endOfLine}},
   {"accept-line",		"Execute a line as a script.",		0, {executeLine}},		// From readline, which uses emacs commands, coz mg at least does not seem to have this.
   {"backward-char",		"Move cursor left one character.",	0, {leftChar}},
-  {"save-buffers-kill-emacs",	"Quit the application.",		0, {quit}},			// Does more than just quit.
+  {"save-buffers-kill-emacs",	"Quit the application.",		0, {quit}},			// TODO - Does more than just quit.
   {"forward-char",		"Move cursor right one character.",	0, {rightChar}},
   {"save-buffer",		"Save.",				0, {saveContent}},
   {"split-window-horizontally",	"Split box in half horizontally.",	0, {halveBoxHorizontally}},	// TODO - Making this one up for now, mg does not have it.
@@ -2214,8 +2212,7 @@ struct keyCommand simpleEmacsKeys[] =
   {"^N",	"next-line"},
   {"End",	"end-of-line"},
   {"^E",	"end-of-line"},
-  {"^X^C",	"save-buffers-kill-emacs"},	// Damn, Ctrl C getting eaten by default signal handling.  On the other hand, at least the "kill-emacs" part will work.  lol
-  {"^Xq",	"save-buffers-kill-emacs"},	// TODO - Faking this so we can actually exit.  Remove it later.
+  {"^X^C",	"save-buffers-kill-emacs"},
   {"^X^S",	"save-buffer"},
   {"Home",	"beginning-of-line"},
   {"^A",	"beginning-of-line"},
@@ -2230,7 +2227,7 @@ struct keyCommand simpleEmacsKeys[] =
   {"^F",	"forward-char"},
   {"^[x",	"execute-extended-command"},	// M-x
   {"^X2",	"split-window-vertically"},
-  {"^X3",	"split-window-horizontally"},	// TODO - Again, just making this up for now.
+  {"^X3",	"split-window-horizontally"},	// TODO - Just making this up for now.
   {"^XP",	"other-window"},
   {"^XP",	"other-window"},
   {"^X0",	"delete-window"},
@@ -2289,7 +2286,7 @@ struct context simpleEmacs =
 // TODO - Some of these might be wrong.  Just going by the inadequate joe docs for now.
 struct function simpleJoeCommands[] =
 {
-  {"nop",		"Do nothing.",			0, {nop}},
+  {"nop",	"Do nothing.",				0, {nop}},
   {"backs",	"Back space last character.",		0, {backSpaceChar}},
   {"abort",	"Delete a box.",			0, {deleteBox}},
   {"delch",	"Delete current character.",		0, {deleteChar}},
@@ -2726,7 +2723,7 @@ struct keyCommand simpleViInsertKeys[] =
   {"Del",	"deleteChar"},
   {"Return",	"splitLine"},
   {"^[",	"visual"},
-  {"^C",	"visual"},	// TODO - Ctrl-C is filtered by the default signal handling, which we might want to disable.
+  {"^C",	"visual"},
   {NULL, NULL}
 };
 
@@ -2847,7 +2844,6 @@ void boxes_main(void)
     VSTART	restart output on ^Q, IXON turns that on.
     VSTATUS	display status info and sends SIGINFO on ^T.  Not in POSIX, not supported in Linux.  Does not seem to be any method of turning it off where it is supported.
     VSTOP	stop output on ^S, IXON turns that on.
-
   */
   termio.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IUCLC | IXON | IXOFF | IXANY);
   termio.c_oflag &= ~OPOST;
