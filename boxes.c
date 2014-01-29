@@ -33,14 +33,20 @@ config BOXES
 */
 
 
+/* We need to catch some signals, coz some things are only sent as
+signals.  If we use poll or select, we get the race condition from the
+signals, which can cause crashes.  Poll is preferable over select in
+general.  So I was using poll originally.  However, ppoll is Linux
+specific, and worse, needs to define the following swear words...
+*/
+#define _GNU_SOURCE
 #include "toys.h"
 
 GLOBALS(
   char *mode;
   long h, w;
   // TODO - actually, these should be globals in the library, and leave this buffer alone.
-  int stillRunning;
-  int overWriteMode;
+  int stillRunning, overWriteMode;
 )
 
 #define TT this.boxes
@@ -660,7 +666,7 @@ static box *rootBox;	// Parent of the rest of the boxes, or the only box.  Alway
 static box *currentBox;
 static view *commandLine;
 static int commandMode;
-
+static /*sigatomic_t*/ volatile int sigWinch;
 
 #define MEM_SIZE  128	// Chunk size for line memory allocation.
 
@@ -1836,7 +1842,7 @@ char *termSize(long extra, int *params, int count)
   // TODO - Double check what the maximum F3 variations can be.
   if ((2 == count) && (8 < r) && (8 < c))
   {
-    // TODO - The change is not being propogated to everything.
+    // FIXME - The change is not being propogated to everything properly.
     sizeViewToBox(rootBox, rootBox->X, rootBox->Y, c, r - 1);
     calcBoxes(rootBox);
     drawBoxes(rootBox);
@@ -1868,6 +1874,9 @@ struct CSI CSI_terminators[] =
 void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct keyCommand * (*lineCommand)(long extra, char *command))
 {
   struct pollfd pollfds[1];
+  struct timespec timeout;
+  sigset_t signalMask;
+
   // Get the initial command set.
   struct keyCommand *ourKeys = lineCommand(extra, "");
   char buffer[20], command[20], csFinal[8];
@@ -1878,6 +1887,9 @@ void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct key
 
   buffer[0] = 0;
   command[0] = 0;
+
+  sigemptyset(&signalMask);
+  sigaddset(&signalMask, SIGWINCH);
 
   // TODO - OS buffered keys might be a problem, but we can't do the usual timestamp filter for now.
   TT.stillRunning = 1;
@@ -1894,17 +1906,31 @@ void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct key
       csIndex = 0;
     }
 
-    // Apparently it's more portable to reset this each time.
+    // Apparently it's more portable to reset these each time.
     memset(pollfds, 0, pollcount * sizeof(struct pollfd));
-    pollfds[0].events = POLLIN;
-    pollfds[0].fd = 0;
+    pollfds[0].events = POLLIN;  pollfds[0].fd = 0;
+    timeout.tv_sec = 0;  timeout.tv_nsec = 100000000; // One tenth of a second.
 
 // TODO - A bit unstable at the moment, something makes it go into a horrid CPU eating edit line flicker mode sometimes.  And / or vi mode can crash on exit (stack smash).
 //          This might be fixed now.
 
+    // We got a "terminal size changed" signal, ask the terminal how big it is now.
+    if (sigWinch)
+    {
+      // Send - save cursor position, down 999, right 999, request cursor position, restore cursor position.
+      printf("\x1B[s\x1B[999C\x1B[999B\x1B[6n\x1B[u");
+      fflush(stdout);
+      sigWinch = 0;
+    }
+
     // TODO - Should only ask for a time out after we get an Escape.
-    p = poll(pollfds, pollcount, 100);    // Timeout of one tenth of a second (100).
-    if (0 >  p)  perror_exit("poll");
+    p = ppoll(pollfds, pollcount, &timeout, &signalMask);
+    if (0 >  p)
+    {
+      if (EINTR == errno)
+        continue;
+      perror_exit("poll");
+    }
     if (0 == p)          // A timeout, trigger a time event.
     {
       if ((1 == index) && ('\x1B' == buffer[0]))
@@ -2767,6 +2793,10 @@ struct context simpleVi =
 // TODO - have any unrecognised escape key sequence start up a new box (split one) to show the "show keys" content.
 // That just adds each "Key is X" to the end of the content, and allows scrolling, as well as switching between other boxes.
 
+static void handleSignals(int signo)
+{
+    sigWinch = 1;
+}
 
 void boxes_main(void)
 {
@@ -2774,6 +2804,7 @@ void boxes_main(void)
   struct termios termio, oldtermio;
   char *prompt = "Enter a command : ";
   unsigned W = 80, H = 24;
+  struct sigaction sigAction, oldSigActions;
 
   // For testing purposes, figure out which context we use.  When this gets real, the toybox multiplexer will sort this out for us instead.
   if (toys.optflags & FLAG_m)
@@ -2854,10 +2885,11 @@ void boxes_main(void)
   termio.c_cc[VMIN]=1;
   tcsetattr(0, TCSANOW, &termio);
 
-  // TODO - set up a handler for SIGWINCH to find out when the terminal has been resized.
-  // TODO - send "\x1B[s\x1B[999C\x1B[999B\x1B[6n\x1B[u"
-  //        Which breaks down to - save cursor position, down 999, right 999, request cursor position (DSR), restore cursor position.
-  //        Already got the stub for dealing with the response.
+  // Terminals send the SIGWINCH signal when they resize.
+  memset(&sigAction, 0, sizeof(sigAction));
+  sigAction.sa_handler = handleSignals;
+  sigAction.sa_flags = SA_RESTART;// Useless since we are using poll.
+  if (sigaction(SIGWINCH, &sigAction, &oldSigActions))  perror_exit("can't set signal handler SIGWINCH");
   terminal_size(&W, &H);
   if (toys.optflags & FLAG_w)
     W = TT.w;
@@ -2901,6 +2933,8 @@ void boxes_main(void)
   editLine((long) currentBox->view, lineChar, lineCommand);
 
   // TODO - Should remember to turn off mouse reporting when we leave.
+
+  sigaction(SIGWINCH, &oldSigActions, NULL);
 
   // Restore the old terminal settings.
   tcsetattr(0, TCSANOW, &oldtermio);
