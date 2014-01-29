@@ -33,12 +33,6 @@ config BOXES
 */
 
 
-/* We need to catch some signals, coz some key strokes used by some editors trigger signals.
-If we use poll or select, we get the race condition from the signals.
-Poll is preferable over select in general.  So I was using poll originally.
-However, ppoll is Linux specific, and worse, needs to define the following swear words...
-*/
-#define _GNU_SOURCE
 #include "toys.h"
 
 GLOBALS(
@@ -666,7 +660,6 @@ static box *rootBox;	// Parent of the rest of the boxes, or the only box.  Alway
 static box *currentBox;
 static view *commandLine;
 static int commandMode;
-static /*sigatomic_t*/ volatile int signalPipe[2];
 
 
 #define MEM_SIZE  128	// Chunk size for line memory allocation.
@@ -1865,9 +1858,7 @@ struct CSI CSI_terminators[] =
 
 void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct keyCommand * (*lineCommand)(long extra, char *command))
 {
-  struct pollfd pollfds[2];
-  struct timespec timeout = {0, 100000000};    // Timeout of one tenth of a second.
-  sigset_t signalMask;
+  struct pollfd pollfds[1];
   // Get the initial command set.
   struct keyCommand *ourKeys = lineCommand(extra, "");
   char buffer[20], command[20], csFinal[8];
@@ -1878,14 +1869,6 @@ void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct key
 
   buffer[0] = 0;
   command[0] = 0;
-
-  sigemptyset(&signalMask);
-  sigaddset(&signalMask, SIGINT);
-  sigaddset(&signalMask, SIGCONT);
-//  sigaddset(&signalMask, SIGSTOP);
-//  sigaddset(&signalMask, SIGINFO);
-  sigaddset(&signalMask, SIGTSTP);
-  sigaddset(&signalMask, SIGQUIT);
 
   // TODO - OS buffered keys might be a problem, but we can't do the usual timestamp filter for now.
   TT.stillRunning = 1;
@@ -1906,15 +1889,11 @@ void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct key
     memset(pollfds, 0, pollcount * sizeof(struct pollfd));
     pollfds[0].events = POLLIN;
     pollfds[0].fd = 0;
-    pollfds[0].events = POLLIN;
-    pollfds[0].fd = signalPipe[0];
 
 // TODO - A bit unstable at the moment, something makes it go into a horrid CPU eating edit line flicker mode sometimes.  And / or vi mode can crash on exit (stack smash).
 //          This might be fixed now.
 
     // TODO - Should only ask for a time out after we get an Escape.
-    p = ppoll(pollfds, pollcount, &timeout, &signalMask);
-//    p = poll(pollfds, pollcount, 100);
     p = poll(pollfds, pollcount, 100);    // Timeout of one tenth of a second (100).
     if (0 >  p)  perror_exit("poll");
     if (0 == p)          // A timeout, trigger a time event.
@@ -2778,35 +2757,6 @@ struct context simpleVi =
 // TODO - have any unrecognised escape key sequence start up a new box (split one) to show the "show keys" content.
 // That just adds each "Key is X" to the end of the content, and allows scrolling, as well as switching between other boxes.
 
-struct signalTranslate
-{
-  int  sig;
-  char key;
-};
-
-struct signalTranslate translate[] =
-{
-  {SIGINT,  '\x03'}, // ^C
-  {SIGCONT, '\x11'}, // ^Q
-  {SIGSTOP, '\x13'}, // ^S
-//  {SIGINFO, '\x14'}, // ^T
-  {SIGTSTP, '\x1A'}, // ^Z
-  {SIGQUIT, '\x1C'}  // "^\"
-};
-
-static void handleSignals(int signo)
-{
-  int j;
-
-  for (j = 0; j < (sizeof(translate) / sizeof(*translate)); j++)
-  {
-    if (translate[j].sig == signo)
-    {
-      write(signalPipe[1], &translate[j].key, 1);
-      break;
-    }
-  }
-}
 
 void boxes_main(void)
 {
@@ -2814,23 +2764,6 @@ void boxes_main(void)
   struct termios termio, oldtermio;
   char *prompt = "Enter a command : ";
   unsigned W = 80, H = 24;
-  int signalPipe[2];
-  struct sigaction sigAction, oldSigActions[6];
-
-  // Set up pipes and signal handlers for catching keys that are normally signals.
-  if (pipe(signalPipe))  perror_exit("can't open a pipe");
-  fcntl(signalPipe[0], F_SETFL, O_NONBLOCK);
-  fcntl(signalPipe[1], F_SETFL, O_NONBLOCK);
-  // Assumes that sigAction is not messed with by sigaction().
-  memset(&sigAction, 0, sizeof(sigAction));
-  sigAction.sa_handler = handleSignals;
-  sigAction.sa_flags = SA_RESTART;	// Useless since we are using poll.
-  if (sigaction(SIGINT,  &sigAction, &oldSigActions[0]))  perror_exit("can't set signal handler SIGINT");	// Crashes with "poll: Interrupted system call"
-  if (sigaction(SIGCONT, &sigAction, &oldSigActions[1]))  perror_exit("can't set signal handler SIGCONT");	// Not needed it seems.
-//  if (sigaction(SIGSTOP, &sigAction, &oldSigActions[2]))  perror_exit("can't set signal handler SIGSTOP");	// Can't be done, screw emacs and vi.  "can't set signal handler SIGSTOP: Invalid argument"
-//  if (sigaction(SIGINFO, &sigAction, &oldSigActions[3]))  perror_exit("can't set signal handler SIGINFO");	// No such thing as SIGINFO without special foo.
-  if (sigaction(SIGTSTP, &sigAction, &oldSigActions[4]))  perror_exit("can't set signal handler SIGTSTP");	// Crashes with "poll: Interrupted system call"
-  if (sigaction(SIGQUIT, &sigAction, &oldSigActions[5]))  perror_exit("can't set signal handler SIGQUIT");	// Crashes with "poll: Interrupted system call" if using "^\"
 
   // For testing purposes, figure out which context we use.  When this gets real, the toybox multiplexer will sort this out for us instead.
   if (toys.optflags & FLAG_m)
@@ -2933,14 +2866,6 @@ void boxes_main(void)
 
   // Restore the old terminal settings.
   tcsetattr(0, TCSANOW, &oldtermio);
-
-  // Probaly don't need to restore these before quitting, but including this in the example.
-  sigaction(SIGINT,  &oldSigActions[0], NULL);
-  sigaction(SIGCONT, &oldSigActions[1], NULL);
-//  sigaction(SIGSTOP, &oldSigActions[2], NULL);
-//  sigaction(SIGINFO, &oldSigActions[3], NULL);
-  sigaction(SIGTSTP, &oldSigActions[4], NULL);
-  sigaction(SIGQUIT, &oldSigActions[5], NULL);
 
   puts("\n");
   fflush(stdout);
