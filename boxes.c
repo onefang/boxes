@@ -320,8 +320,8 @@ struct key keys[] =
 //  {"\x00",		"^@"},		// NUL Commented out coz it's the C string terminator, and may confuse things.
   {"\x01",		"^A"},		// SOH Apparently sometimes sent as Home
   {"\x02",		"^B"},		// STX
-  {"\x03",		"^C"},		// ETX SIGTERM
-  {"\x04",		"^D"},		// EOT
+  {"\x03",		"^C"},		// ETX SIGINT  Emacs and vi.
+  {"\x04",		"^D"},		// EOT EOF     Emacs, joe, and nano.
   {"\x05",		"^E"},		// ENQ Apparently sometimes sent as End
   {"\x06",		"^F"},		// ACK
   {"\x07",		"^G"},		// BEL
@@ -332,25 +332,25 @@ struct key keys[] =
   {"\x0C",		"^L"},		// FF
   {"\x0D",		"^M"},		// CR  Other Return key, usually.
   {"\x0E",		"^N"},		// SO
-  {"\x0F",		"^O"},		// SI
+  {"\x0F",		"^O"},		// SI  DISCARD
   {"\x10",		"^P"},		// DLE
-  {"\x11",		"^Q"},		// DC1
+  {"\x11",		"^Q"},		// DC1 SIGCONT  Vi, and made up commands in MC, which seem to work anyway.
   {"\x12",		"^R"},		// DC2
-  {"\x13",		"^S"},		// DC3
-  {"\x14",		"^T"},		// DC4
-  {"\x15",		"^U"},		// NAK
-  {"\x16",		"^V"},		// SYN
-  {"\x17",		"^W"},		// ETB
-  {"\x18",		"^X"},		// CAN
-  {"\x19",		"^Y"},		// EM
-  {"\x1A",		"^Z"},		// SUB
+  {"\x13",		"^S"},		// DC3 SIGSTOP can't be caught.  Emacs and vi, so much for "can't be caught".
+  {"\x14",		"^T"},		// DC4 SIGINFO STATUS
+  {"\x15",		"^U"},		// NAK KILL character
+  {"\x16",		"^V"},		// SYN LNEXT
+  {"\x17",		"^W"},		// ETB WERASE
+  {"\x18",		"^X"},		// CAN KILL character
+  {"\x19",		"^Y"},		// EM  DSUSP SIGTSTP
+  {"\x1A",		"^Z"},		// SUB SIGTSTP
 //  {"\x1B",		"^["},		// ESC Esc key.  Commented out coz it's the ANSI start byte in the below multibyte keys.  Handled in the code with a timeout.
-  {"\x1C",		"^\\"},		// FS SIGQUIT
+  {"\x1C",		"^\\"},		// FS SIGQUIT  Some say ^D is SIGQUIT, but my tests say it's this.
   {"\x1D",		"^]"},		// GS
   {"\x1E",		"^^"},		// RS
   {"\x1F",		"^_"},		// US
   {"\x7F",		"BS"},		// Backspace key, usually.  Ctrl-? perhaps?
-  {"\x9B",		"CSI"},		// CSI The eight bit encoding of "Esc [".
+//  {"\x9B",		"CSI"},		// CSI The eight bit encoding of "Esc [".  Commented out for the same reason Esc is.
 
   // "Usual" xterm CSI sequences, with ";1" omitted for no modifiers.
   // Even though we have a proper CSI parser, these should still be in this table.
