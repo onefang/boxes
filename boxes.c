@@ -2023,11 +2023,13 @@ TODO	    So abort the current CSI and start from scratch.
           // So we know when we get to the end of parameter space.
           t = rindex("01234567890:;<=>?", buffer[j + 1]);
           // See if we passed a paremeter.
-          if ((';' == buffer[j]) || (NULL == t))
+          if ((';' == buffer[j]) || (!t))
           {
-            buffer[j] = 0;
+            // Only stomp on the ; if it's really the ;.
+            if (t)
+              buffer[j] = 0;
             // Empty parameters are default parameters, so only deal with non defaults.
-            if (';' != buffer[csIndex] || (NULL == t))
+            if (';' != buffer[csIndex] || (!t))
             {
               // TODO - Might be ":" in the number somewhere, but we are not expecting any in anything we do.
               csParams[csCount] = atoi(&buffer[csIndex]);
