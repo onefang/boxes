@@ -2805,13 +2805,42 @@ void boxes_main(void)
     ECHOK	If ICANON is also set, the KILL character erases the current line. 
     ECHONL	If ICANON is also set, echo the NL character even if ECHO is not set. 
     TOSTOP	Send the SIGTTOU signal to the process group of a background process which tries to write to its controlling terminal.
-    ICANON	Enable canonical mode. This enables the special characters EOF, EOL, EOL2, ERASE, KILL, LNEXT, REPRINT, STATUS, and WERASE, and buffers by lines. 
+    ICANON	Enable canonical mode. This enables the special characters EOF, EOL, EOL2, ERASE, KILL, LNEXT, REPRINT, STATUS, and WERASE, and buffers by lines.
 
-    VTIME	Timeout in deciseconds for non-canonical read. 
+    VTIME	Timeout in deciseconds for non-canonical read.
     VMIN	Minimum number of characters for non-canonical read.
+
+    raw mode  turning off ICANON, IEXTEN, and ISIG kills most special key processing.
+       termio.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
+       termio.c_oflag &= ~OPOST;
+       termio.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+       termio.c_cflag &= ~(CSIZE | PARENB);
+       termio.c_cflag |= CS8;
+
+    IGNBRK	ignore BREAK
+    BRKINT	complicated, bet in this context, sends BREAK as '\x00'
+    PARMRK	characters with parity or frame erors are sent as '\x00'
+    ISTRIP	strip 8th byte
+    INLCR	translate LF to CR in input
+    IGLCR	ignore CR
+    OPOST	enable implementation defined output processing
+    ISIG	generate signals on INTR (SIGINT on ^C), QUIT (SIGQUIT on ^\\), SUSP (SIGTSTP on ^Z), DSUSP (SIGTSTP on ^Y)
+    IEXTEN	enable implementation defined input processing, turns on some key -> signal -tuff
+    CSIZE	mask for character sizes, so in this case, we mask them all out
+    PARENB	enable parity
+    CS8		8 bit characters
+
+    VEOF	"sends" EOF on ^D
+    VSTART	restart output on ^Q, IXON turns that on.
+    VSTATUS	display status info and sends SIGINFO on ^T.  Not in POSIX, not supported in Linux.  Does not seem to be any method of turning it off where it is supported.
+    VSTOP	stop output on ^S, IXON turns that on.
+
   */
-  termio.c_iflag &= ~(IUCLC|IXON|IXOFF|IXANY);
-  termio.c_lflag &= ~(ECHO|ECHOE|ECHOK|ECHONL|TOSTOP|ICANON);
+  termio.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IUCLC | IXON | IXOFF | IXANY);
+  termio.c_oflag &= ~OPOST;
+  termio.c_lflag &= ~(ECHO | ECHOE | ECHOK | ECHONL | TOSTOP | ICANON | ISIG | IEXTEN);
+  termio.c_cflag &= ~(CSIZE | PARENB);
+  termio.c_cflag |= CS8;
   termio.c_cc[VTIME]=0;  // deciseconds.
   termio.c_cc[VMIN]=1;
   tcsetattr(0, TCSANOW, &termio);
