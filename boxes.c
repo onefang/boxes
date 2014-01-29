@@ -309,7 +309,6 @@ struct key
 // TODO - Add more shift variations, plus Ctrl & Alt variations when needed.
 // TODO - tmux messes with the shift function keys somehow.
 // TODO - Add other miscelany that does not use an escape sequence.
-// TODO - maybe worth writing a proper CSI parse instead.  Would be useful for terminal size and mouse reports.
 
 // This is sorted by type, though there is some overlap.
 // Human typing speeds wont need binary searching speeds on this small table.
@@ -353,64 +352,67 @@ struct key keys[] =
   {"\x9B",		"CSI"},		// CSI The eight bit encoding of "Esc [".
 
   // "Usual" xterm CSI sequences, with ";1" omitted for no modifiers.
-  {"\x1B[1~",		"Home"},	// Duplicate, think I've seen this somewhere.
-  {"\x1B[2~",		"Ins"},
-  {"\x1B[3~",		"Del"},
-  {"\x1B[4~",		"End"},		// Duplicate, think I've seen this somewhere.
-  {"\x1B[5~",		"PgUp"},
-  {"\x1B[6~",		"PgDn"},
-  {"\x1B[7~",		"Home"},
-  {"\x1B[8~",		"End"},
-  {"\x1B[11~",		"F1"},
-  {"\x1B[12~",		"F2"},
-  {"\x1B[13~",		"F3"},
-  {"\x1B[14~",		"F4"},
-  {"\x1B[15~",		"F5"},
-  {"\x1B[17~",		"F6"},
-  {"\x1B[18~",		"F7"},
-  {"\x1B[19~",		"F8"},
-  {"\x1B[20~",		"F9"},
-  {"\x1B[21~",		"F10"},
-  {"\x1B[23~",		"F11"},
-  {"\x1B[24~",		"F12"},
+  // Even though we have a proper CSI parser, these should still be in this table.
+  // Coz we would need a table anyway in the CSI parser, so might as well keep them with the others.
+  // Also, less code, no need to have a separate scanner for that other table.
+  {"\x9B\x31~",		"Home"},	// Duplicate, think I've seen this somewhere.
+  {"\x9B\x32~",		"Ins"},
+  {"\x9B\x33~",		"Del"},
+  {"\x9B\x34~",		"End"},		// Duplicate, think I've seen this somewhere.
+  {"\x9B\x35~",		"PgUp"},
+  {"\x9B\x36~",		"PgDn"},
+  {"\x9B\x37~",		"Home"},
+  {"\x9B\x38~",		"End"},
+  {"\x9B\x31\x31~",		"F1"},
+  {"\x9B\x31\x32~",		"F2"},
+  {"\x9B\x31\x33~",		"F3"},
+  {"\x9B\x31\x34~",		"F4"},
+  {"\x9B\x31\x35~",		"F5"},
+  {"\x9B\x31\x37~",		"F6"},
+  {"\x9B\x31\x38~",		"F7"},
+  {"\x9B\x31\x39~",		"F8"},
+  {"\x9B\x32\x30~",		"F9"},
+  {"\x9B\x32\x31~",		"F10"},
+  {"\x9B\x32\x33~",		"F11"},
+  {"\x9B\x32\x34~",		"F12"},
 
   // As above, ";2" means shift modifier.
-  {"\x1B[1;2~",		"Shift Home"},
-  {"\x1B[2;2~",		"Shift Ins"},
-  {"\x1B[3;2~",		"Shift Del"},
-  {"\x1B[4;2~",		"Shift End"},
-  {"\x1B[5;2~",		"Shift PgUp"},
-  {"\x1B[6;2~",		"Shift PgDn"},
-  {"\x1B[7;2~",		"Shift Home"},
-  {"\x1B[8;2~",		"Shift End"},
-  {"\x1B[11;2~",	"Shift F1"},
-  {"\x1B[12;2~",	"Shift F2"},
-  {"\x1B[13;2~",	"Shift F3"},
-  {"\x1B[14;2~",	"Shift F4"},
-  {"\x1B[15;2~",	"Shift F5"},
-  {"\x1B[17;2~",	"Shift F6"},
-  {"\x1B[18;2~",	"Shift F7"},
-  {"\x1B[19;2~",	"Shift F8"},
-  {"\x1B[20;2~",	"Shift F9"},
-  {"\x1B[21;2~",	"Shift F10"},
-  {"\x1B[23;2~",	"Shift F11"},
-  {"\x1B[24;2~",	"Shift F12"},
+  {"\x9B\x31;2~",		"Shift Home"},
+  {"\x9B\x32;2~",		"Shift Ins"},
+  {"\x9B\x33;2~",		"Shift Del"},
+  {"\x9B\x34;2~",		"Shift End"},
+  {"\x9B\x35;2~",		"Shift PgUp"},
+  {"\x9B\x36;2~",		"Shift PgDn"},
+  {"\x9B\x37;2~",		"Shift Home"},
+  {"\x9B\x38;2~",		"Shift End"},
+  {"\x9B\x31\x31;2~",	"Shift F1"},
+  {"\x9B\x31\x32;2~",	"Shift F2"},
+  {"\x9B\x31\x33;2~",	"Shift F3"},
+  {"\x9B\x31\x34;2~",	"Shift F4"},
+  {"\x9B\x31\x35;2~",	"Shift F5"},
+  {"\x9B\x31\x37;2~",	"Shift F6"},
+  {"\x9B\x31\x38;2~",	"Shift F7"},
+  {"\x9B\x31\x39;2~",	"Shift F8"},
+  {"\x9B\x32\x30;2~",	"Shift F9"},
+  {"\x9B\x32\x31;2~",	"Shift F10"},
+  {"\x9B\x32\x33;2~",	"Shift F11"},
+  {"\x9B\x32\x34;2~",	"Shift F12"},
 
   // "Normal" Some terminals are special, and it seems they only have four function keys.
-  {"\x1B[A",		"Up"},
-  {"\x1B[B",		"Down"},
-  {"\x1B[C",		"Right"},
-  {"\x1B[D",		"Left"},
-  {"\x1B[F",		"End"},
-  {"\x1B[H",		"Home"},
-  {"\x1B[P",		"F1"},
-  {"\x1B[Q",		"F2"},
-  {"\x1B[R",		"F3"},
-  {"\x1B[S",		"F4"},
-  {"\x1B[1;2P",		"Shift F1"},
-  {"\x1B[1;2Q",		"Shift F2"},
-  {"\x1B[1;2R",		"Shift F3"},
-  {"\x1B[1;2S",		"Shift F4"},
+  {"\x9B\x41",		"Up"},
+  {"\x9B\x42",		"Down"},
+  {"\x9B\x43",		"Right"},
+  {"\x9B\x44",		"Left"},
+  {"\x9B\x46",		"End"},
+  {"\x9BH",		"Home"},
+  {"\x9BP",		"F1"},
+  {"\x9BQ",		"F2"},
+  {"\x9BR",		"F3"},
+  {"\x9BS",		"F4"},
+  {"\x9B\x31;2P",		"Shift F1"},
+  {"\x9B\x31;2Q",		"Shift F2"},
+  {"\x9B\x31;2R",		"Shift F3"},
+  {"\x9B\x31;2S",		"Shift F4"},
 
   // "Application"  Esc O is known as SS3
   {"\x1BOA",		"Up"},
@@ -429,13 +431,13 @@ struct key keys[] =
   {"\x1BOS",		"F4"},
   {"\x1BOT",		"F5"},
   // These two conflict with the above four function key variations.
-  {"\x1B[R",		"F6"},
-  {"\x1B[S",		"F7"},
-  {"\x1B[T",		"F8"},
-  {"\x1B[U",		"F9"},
-  {"\x1B[V",		"F10"},
-  {"\x1B[W",		"F11"},
-  {"\x1B[X",		"F12"},
+  {"\x9BR",		"F6"},
+  {"\x9BS",		"F7"},
+  {"\x9BT",		"F8"},
+  {"\x9BU",		"F9"},
+  {"\x9BV",		"F10"},
+  {"\x9BW",		"F11"},
+  {"\x9BX",		"F12"},
 
   // Can't remember, but saw them somewhere.
   {"\x1BO1;2P",		"Shift F1"},
@@ -493,6 +495,7 @@ typedef struct _view view;
 
 typedef void (*boxFunction) (box *box);
 typedef void (*eventHandler) (view *view);
+typedef char * (*CSIhandler) (long extra, int *code, int count);
 
 struct function
 {
@@ -1819,23 +1822,46 @@ Less and more have the "ZZ" command, but nothing else seems to have multi ordina
 Some editors have a shortcut command concept.  The smallest unique first part of each command will match, as well as anything longer.
   A further complication is if we are not implementing some commands that might change what is "shortest unique prefix".
 
-The response from a terminal size check command includes a prefix, a suffix, with the data in the middle.
-  send "\x1B[s\x1B[999C\x1B[999B\x1B[6n\x1B[u"
-    Which breaks down to - save cursor position, down 999, right 999, request cursor position (DSR), restore cursor position.
   response is "\x1B[ ; R", where the spaces are replaced by digits LINES and COLUMNS respectively.
-    And just to screw things up - {"\x1B[1;2R",		"Shift F3"}, though no one's going to have a 1 x 2 terminal.
-
-  Mouse events are likely similar.
 */
+
+
+char *termSize(long extra, int *params, int count)
+{
+  int r = params[0], c = params[1];
+
+  // TODO - Deal with defaults, though perhaps this wont ever send defaults?
+  //        The heuristic below ignores defaults.
+  // Check it's not an F3 key variation, coz some of them use the same CSI function code.
+  // This is a heuristic, we are checking against an unusable terminal size.
+  // TODO - Double check what the maximum F3 variations can be.
+  if ((2 == count) && (8 < r) && (8 < c))
+  {
+    // TODO - We got a valid terminal size response, do something with it.
+  }
+
+  return NULL;
+}
+
+struct CSI
+{
+  char *code;
+  CSIhandler func;
+};
+
+struct CSI CSI_terminators[] =
+{
+  {"R", termSize},
+  {NULL, NULL}
+};
+
 void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct keyCommand * (*lineCommand)(long extra, char *command))
 {
   struct pollfd pollfds[1];
   // Get the initial command set.
   struct keyCommand *ourKeys = lineCommand(extra, "");
-  char buffer[20];
-  char command[20];
-  int pollcount = 1;
-  int index = 0;
+  char buffer[20], command[20], csFinal[8];
+  int csi = 0, csCount = 0, csIndex = 0, csParams[8], index = 0, pollcount = 1;
 // TODO - multiline editLine is an advanced feature.  Editing boxes just moves the editLine up and down.
 //  uint16_t h = 1;
 // TODO - should check if it's at the top of the box, then grow it down instead of up if so.
@@ -1849,6 +1875,14 @@ void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct key
   {
     int j, p;
     char *found = NULL;
+
+    if (0 == index)
+    {
+      buffer[0] = 0;
+      csi = 0;
+      csCount = 0;
+      csIndex = 0;
+    }
 
     // Apparently it's more portable to reset this each time.
     memset(pollfds, 0, pollcount * sizeof(struct pollfd));
@@ -1868,7 +1902,6 @@ void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct key
         // After a short delay to check, this is a real Escape key, not part of an escape sequence, so deal with it.
         strcpy(command, "^[");
         index = 0;
-        buffer[0] = 0;
       }
       // TODO - Send a timer event to lineCommand().  This wont be a precise timed event, but don't think we need one.
     }
@@ -1905,13 +1938,29 @@ void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct key
               fprintf(stderr, "(%x) %c, ", (int) buffer[j], buffer[j]);
             fflush(stderr);
             index = 0;
-            buffer[0] = 0;
           }
           else  buffer[index] = 0;
         }
       }
     }
 
+    // Check if it's a CSI before we check for the known key sequences.
+    if ('\x9B' == buffer[0])
+      csi = 1;
+    if (('\x1B' == buffer[0]) && ('[' == buffer[1]))
+      csi = 2;
+    if (('\xC2' == buffer[0]) && ('\x9B' == buffer[1]))
+      csi = 2;
+    if (2 == csi)
+    {
+      buffer[0] = '\x9B';
+      for (j = 1; buffer[j]; j++)
+        buffer[j] = buffer[j + 1];
+      index--;
+      csi = 1;
+    }
+
+    // Check for known key sequences.
     // For a real timeout checked Esc, buffer is now empty, so this for loop wont find it anyway.
     // While it's true we could avoid it by checking, the user already had to wait for a time out, and this loop wont take THAT long.
     for (j = 0; keys[j].code; j++)    // Search for multibyte keys and control keys.
@@ -1920,9 +1969,92 @@ void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct key
       {
         strcat(command, keys[j].name);
         index = 0;
-        buffer[0] = 0;
+        csi = 0;
         break;
       }
+    }
+
+    // Find out if it's a CSI sequence that's not in the known key sequences.
+    if (csi)
+    {
+      /* ECMA-048 section 5.2 defines this, and is unreadable.
+	General CSI format - CSI [private] n1 ; n2 [extra] final
+	    private	0x3c to 0x3f  [<=>?] if first byte is one of these, this is a private command, if it's one of the other n1 ones, it's not private.
+	    n1		0x30 to 0x3f  [01234567890:;<=>?] ASCII digits forming a "number"
+			0x3a [:] used for floats, not expecting any.  Could also be used as some other sort of inter digit separator.
+			0x3b [;] separates the parameters
+	    extra	0x20 to 0x2f  [  !"#$%&'()*+,-./]  Can be multiple, likely isn't.
+	    final	0x40 to 0x7e  "@A .. Z[\]^_`a .. z{|}~" it's private if 0x70 to 0x7e [p ..z{|}~]
+		Though the "private" ~ is used for key codes.
+		    We also have SS3 "\x1BO" for other keys, but that's not a CSI.
+	  C0 controls, DEL (0x7f), or high characters are undefined.
+TODO	    So abort the current CSI and start from scratch.
+      */
+
+      char *t;
+
+      csIndex = 1;
+      csFinal[0] = 0;
+      // Unspecified params default to a value that is command dependant.
+      // However, they will never be negative, so we can use -1 to flag a default value.
+      for (j = 0; j < sizeof(csParams); j++)
+        csParams[j] = -1;
+
+      if ('M' == buffer[1])
+      {
+        // TODO - We have a mouse report, which is CSI M ..., where the rest is binary encoded, more or less.  Not fitting into the CSI format.
+      }
+      else
+      {
+        // TODO - Using rindex here, coz index is a variable in this scope.  Should rename index.
+        // Check for the private bit.
+        if (rindex("<=>?", buffer[1]))
+        {
+          csFinal[0] = buffer[1];
+          csFinal[1] = 0;
+          csIndex++;
+        }
+
+        // Decode parameters.
+        j = csIndex;
+        do
+        {
+          // So we know when we get to the end of parameter space.
+          t = rindex("01234567890:;<=>?", buffer[j + 1]);
+          // See if we passed a paremeter.
+          if ((';' == buffer[j]) || (NULL == t))
+          {
+            buffer[j] = 0;
+            // Empty parameters are default parameters, so only deal with non defaults.
+            if (';' != buffer[csIndex] || (NULL == t))
+            {
+              // TODO - Might be ":" in the number somewhere, but we are not expecting any in anything we do.
+              csParams[csCount] = atoi(&buffer[csIndex]);
+            }
+            csCount++;
+            csIndex = j + 1;
+          }
+          j++;
+        }
+        while (t);
+
+        // Get the final command sequence, and search for it.
+        strcat(csFinal, &buffer[csIndex]);
+        for (j = 0; CSI_terminators[j].code; j++)
+        {
+          if (strcmp(CSI_terminators[j].code, csFinal) == 0)
+          {
+            t = CSI_terminators[j].func(extra, csParams, csCount);
+            if (t)
+              strcpy(command, t);
+            break;
+          }
+        }
+      }
+
+      csi = 0;
+      // Wether or not it's a CSI we understand, it's been handled either here or in the key sequence scanning above.
+      index = 0;
     }
 
     // See if it's an ordinary key,
@@ -1945,7 +2077,6 @@ void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct key
         else             lineChar(extra, buffer);
       }
       index = 0;
-      buffer[0] = 0;
     }
 
     if (command[0])        // Search for a bound key.
@@ -2685,6 +2816,9 @@ void boxes_main(void)
   tcsetattr(0, TCSANOW, &termio);
 
   // TODO - set up a handler for SIGWINCH to find out when the terminal has been resized.
+  // TODO - send "\x1B[s\x1B[999C\x1B[999B\x1B[6n\x1B[u"
+  //        Which breaks down to - save cursor position, down 999, right 999, request cursor position (DSR), restore cursor position.
+  //        Already got the stub for dealing with the response.
   terminal_size(&W, &H);
   if (toys.optflags & FLAG_w)
     W = TT.w;
