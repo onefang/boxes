@@ -496,7 +496,7 @@ typedef struct _view view;
 
 typedef void (*boxFunction) (box *box);
 typedef void (*eventHandler) (view *view);
-typedef char * (*CSIhandler) (long extra, int *code, int count);
+typedef char *(*CSIhandler) (long extra, int *code, int count);
 
 struct function
 {
@@ -1829,16 +1829,27 @@ Some editors have a shortcut command concept.  The smallest unique first part of
 
 char *termSize(long extra, int *params, int count)
 {
+  struct _view *view = (struct _view *) extra;		// Though we pretty much stomp on this straight away.
   int r = params[0], c = params[1];
 
-  // TODO - Deal with defaults, though perhaps this wont ever send defaults?
-  //        The heuristic below ignores defaults.
+  // The defaults are 1, which get ignored by the heuristic below.
   // Check it's not an F3 key variation, coz some of them use the same CSI function code.
   // This is a heuristic, we are checking against an unusable terminal size.
   // TODO - Double check what the maximum F3 variations can be.
   if ((2 == count) && (8 < r) && (8 < c))
   {
-    // TODO - We got a valid terminal size response, do something with it.
+    // TODO - The change is not being propogated to everything.
+    sizeViewToBox(rootBox, rootBox->X, rootBox->Y, c, r - 1);
+    calcBoxes(rootBox);
+    drawBoxes(rootBox);
+
+    // Move the cursor to where it is, to check it's not now outside the terminal window.
+    moveCursorAbsolute(rootBox->view, rootBox->view->cX, rootBox->view->cY, 0, 0);
+
+    // We have no idea which is the current view now.
+    if (commandMode)	view = commandLine;
+    else		view = currentBox->view;
+    updateLine(view);
   }
 
   return NULL;
@@ -1852,7 +1863,7 @@ struct CSI
 
 struct CSI CSI_terminators[] =
 {
-  {"R", termSize},
+  {"R", termSize},	// Parameters are cursor line and column.  Note this may be sent at other times, not just during terminal resize.
   {NULL, NULL}
 };
 
