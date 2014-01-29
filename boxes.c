@@ -1998,7 +1998,7 @@ TODO	    So abort the current CSI and start from scratch.
       csFinal[0] = 0;
       // Unspecified params default to a value that is command dependant.
       // However, they will never be negative, so we can use -1 to flag a default value.
-      for (j = 0; j < sizeof(csParams); j++)
+      for (j = 0; j < (sizeof(csParams) / sizeof(*csParams)); j++)
         csParams[j] = -1;
 
       if ('M' == buffer[1])
