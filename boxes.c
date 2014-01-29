@@ -2158,7 +2158,6 @@ struct function simpleEditCommands[] =
   {"endOfLine",		"Go to end of line.",			0, {endOfLine}},
   {"executeLine",	"Execute a line as a script.",		0, {executeLine}},
   {"leftChar",		"Move cursor left one character.",	0, {leftChar}},
-  {"nop",		"Do nothing.",				0, {nop}},
   {"quit",		"Quit the application.",		0, {quit}},
   {"rightChar",		"Move cursor right one character.",	0, {rightChar}},
   {"save",		"Save.",				0, {saveContent}},
@@ -2206,7 +2205,6 @@ struct keyCommand simpleCommandKeys[] =
 // readline uses these same commands, and defaults to emacs keystrokes.
 struct function simpleEmacsCommands[] =
 {
-  {"nop",			"Do nothing.",				0, {nop}},
   {"delete-backward-char",	"Back space last character.",		0, {backSpaceChar}},
   {"delete-window",		"Delete a box.",			0, {deleteBox}},
   {"delete-char",		"Delete current character.",		0, {deleteChar}},
@@ -2312,7 +2310,6 @@ struct context simpleEmacs =
 // TODO - Some of these might be wrong.  Just going by the inadequate joe docs for now.
 struct function simpleJoeCommands[] =
 {
-  {"nop",	"Do nothing.",				0, {nop}},
   {"backs",	"Back space last character.",		0, {backSpaceChar}},
   {"abort",	"Delete a box.",			0, {deleteBox}},
   {"delch",	"Delete current character.",		0, {deleteChar}},
@@ -2542,7 +2539,6 @@ struct context simpleMcedit =
 
 struct function simpleNanoCommands[] =
 {
-  {"nop",		"Do nothing.",				0, {nop}},
   {"backSpaceChar",	"Back space last character.",		0, {backSpaceChar}},
   {"delete",		"Delete current character.",		0, {deleteChar}},
   {"down",		"Move cursor down one line.",		0, {downLine}},
@@ -2677,8 +2673,6 @@ void viStartOfNextLine(view *view)
 // TODO - ex uses "shortest unique string" to match commands, should implement that, and do it for the other contexts to.
 struct function simpleViCommands[] =
 {
-  {"nop",		"Do nothing.",				0, {nop}},
-
   // These are actual ex commands.
   {"insert",		"Switch to insert mode.",		0, {viInsertMode}},
   {"quit",		"Quit the application.",		0, {quit}},
