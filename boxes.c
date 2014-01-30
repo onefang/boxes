@@ -1091,6 +1091,9 @@ void doCommand(view *view, char *command)
     struct function *functions = view->content->context->commands;
     int i;
 
+// TODO - Some editors have a shortcut command concept.  The smallest unique first part of each command will match, as well as anything longer.
+//          A further complication is if we are not implementing some commands that might change what is "shortest unique prefix".
+
     for (i = 0; functions[i].name; i++)
     {
       if (strcmp(functions[i].name, command) == 0)
@@ -1855,12 +1858,8 @@ struct CSI CSI_terminators[] =
 
 // Basically this is the main loop.
 
-/*  Unhandled complications -
-Less and more have the "ZZ" command, but nothing else seems to have multi ordinary character commands.
-
-Some editors have a shortcut command concept.  The smallest unique first part of each command will match, as well as anything longer.
-  A further complication is if we are not implementing some commands that might change what is "shortest unique prefix".
-*/
+// TODO - Unhandled complications -
+//   Less and more have the "ZZ" command, but nothing else seems to have multi ordinary character commands.
 
 void handle_keys(long extra, void (*lineChar)(long extra, char *buffer), struct keyCommand * (*lineCommand)(long extra, char *sequence))
 {
@@ -2656,7 +2655,6 @@ void viStartOfNextLine(view *view)
   downLine(view);
 }
 
-// TODO - ex uses "shortest unique string" to match commands, should implement that, and do it for the other contexts to.
 struct function simpleViCommands[] =
 {
   // These are actual ex commands.
