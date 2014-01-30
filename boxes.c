@@ -1868,17 +1868,11 @@ void handle_keys(long extra, int (*handle_sequence)(long extra, char *sequence))
   fd_set selectFds;
   struct timespec timeout;
   sigset_t signalMask;
-
-  // Get the initial command set.
-  char buffer[20], sequence[20], csFinal[8];
+  char buffer[20], sequence[20];
   int buffIndex = 0;
-// TODO - multiline editLine is an advanced feature.  Editing boxes just moves the editLine up and down.
-//  uint16_t h = 1;
-// TODO - should check if it's at the top of the box, then grow it down instead of up if so.
 
   buffer[0] = 0;
   sequence[0] = 0;
-
   sigemptyset(&signalMask);
   sigaddset(&signalMask, SIGWINCH);
 
@@ -1900,7 +1894,7 @@ void handle_keys(long extra, int (*handle_sequence)(long extra, char *sequence))
     if (sigWinch)
     {
       // Send - save cursor position, down 999, right 999, request cursor position, restore cursor position.
-      printf("\x1B[s\x1B[999C\x1B[999B\x1B[6n\x1B[u");
+      fputs("\x1B[s\x1B[999C\x1B[999B\x1B[6n\x1B[u", stdout);
       fflush(stdout);
       sigWinch = 0;
     }
@@ -2006,7 +2000,7 @@ void handle_keys(long extra, int (*handle_sequence)(long extra, char *sequence))
 TODO	    So abort the current CSI and start from scratch.
       */
 
-      char *t;
+      char *t, csFinal[8];
       int csIndex = 1, csParams[8];
 
       csFinal[0] = 0;
@@ -2845,14 +2839,14 @@ void boxes_main(void)
   // http://rtfm.etla.org/xterm/ctlseq.html documents xterm stuff, near the bottom is the mouse stuff.
   // http://leonerds-code.blogspot.co.uk/2012/04/wide-mouse-support-in-libvterm.html is helpful.
   // Enable mouse (VT200 normal tracking mode, UTF8 encoding).  The limit is 2015.  Seems to only be in later xterms.
-//  printf("\x1B[?1005h");
+//  fputs("\x1B[?1005h", stdout);
   // Enable mouse (VT340 locator reporting mode).  In theory has no limit.  Wont actually work though.
   // On the other hand, only allows for four buttons, so only half a mouse wheel.
   // Responds with "\1B[e;p;r;c;p&w" where e is event type, p is a bitmap of buttons pressed, r and c are the mouse coords in decimal, and p is the "page number".
-//  printf("\x1B[1;2'z\x1B[1;3'{");
+//  fputs("\x1B[1;2'z\x1B[1;3'{", stdout);
   // Enable mouse (VT200 normal tracking mode).  Has a limit of 256 - 32 rows and columns.  An xterm exclusive I think, but works in roxterm at least.  No wheel reports.
   // Responds with "\x1B[Mbxy" where x and y are the mouse coords, and b is bit encoded buttons and modifiers - 0=MB1 pressed, 1=MB2 pressed, 2=MB3 pressed, 3=release, 4=Shift, 8=Meta, 16=Control
-  printf("\x1B[?1000h");
+  fputs("\x1B[?1000h", stdout);
   fflush(stdout);
 
   calcBoxes(currentBox);
@@ -2870,6 +2864,6 @@ void boxes_main(void)
   // Restore the old terminal settings.
   tcsetattr(0, TCSANOW, &oldtermio);
 
-  puts("\n");
+  puts("");
   fflush(stdout);
 }
