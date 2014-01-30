@@ -30,47 +30,51 @@ struct keyCommand
 GLOBALS(
   unsigned h, w;
   int x, y;
+  struct double_list *current;
 )
 
 #define TT this.dumbsh
 
-static void moveCursor()
+static void updateLine()
 {
   if (0 > TT.y)  TT.y = 0;
   if (0 > TT.x)  TT.x = 0;
   if (strlen(toybuf) <= TT.x)  TT.x = strlen(toybuf);
-  if (TT.w < TT.y)  TT.y = TT.w;
-  if (TT.h < TT.x)  TT.x = TT.h;
-  printf("\x1B[%d;0H%s\x1B[%d;%dH", TT.y + 1, toybuf, TT.y + 1, TT.x + 1);
+  if (TT.h < TT.y)  TT.y = TT.h;
+  if (TT.w < TT.x)  TT.x = TT.w;
+  printf("\x1B[%d;0H%-*s\x1B[%d;%dH", TT.y + 1, TT.w, toybuf, TT.y + 1, TT.x + 1);
   fflush(stdout);
 }
 
+// Callback for incoming CSI commands from the terminal.
 static void handleCSI(long extra, char *command, int *params, int count)
 {
-  // Parameters are cursor line and column.  Note this may be sent at other times, not just during terminal resize.
+  // Is it a cursor location report?
   if (strcmp("R", command) == 0)
   {
+    // Parameters are cursor line and column.  Note this may be sent at other times, not just during terminal resize.
+    // The defaults are 1, which get ignored by the heuristic below.
     int r = params[0], c = params[1];
 
-    // The defaults are 1, which get ignored by the heuristic below.
     // Check it's not an F3 key variation, coz some of them use the same CSI function code.
     // This is a heuristic, we are checking against an unusable terminal size.
     if ((2 == count) && (8 < r) && (8 < c))
     {
       TT.h = r;
       TT.w = c;
-      moveCursor();
+      updateLine();
     }
   }
 }
 
+// The various commands.
 static void deleteChar()
 {
   int j;
 
   for (j = TT.x; toybuf[j]; j++)
     toybuf[j] = toybuf[j + 1];
-  moveCursor();
+  updateLine();
 }
 
 static void backSpaceChar()
@@ -82,31 +86,42 @@ static void backSpaceChar()
   }
 }
 
+// This is where we would actually deal with what ever command the user had typed in.
+// For now we just move on.
 static void doCommand()
 {
-  // This is where we would actually deal with what ever command the user had typed in.
-  // For now we just move on.
   toybuf[0] = 0;
   TT.x = 0;
   TT.y++;
-  moveCursor();
-}
-
-static void downLine()
-{
-  // Do command history stuff here.
+  updateLine();
 }
 
 static void endOfLine()
 {
   TT.x = strlen(toybuf) - 1;
-  moveCursor();
+  updateLine();
 }
 
 static void leftChar()
 {
   TT.x--;
-  moveCursor();
+  updateLine();
+}
+
+static void nextHistory()
+{
+  TT.current = TT.current->next;
+  strcpy(toybuf, TT.current->data);
+  TT.x = strlen(toybuf);
+  updateLine();
+}
+
+static void prevHistory()
+{
+  TT.current = TT.current->prev;
+  strcpy(toybuf, TT.current->data);
+  TT.x = strlen(toybuf);
+  updateLine();
 }
 
 static void quit()
@@ -117,28 +132,26 @@ static void quit()
 static void rightChar()
 {
   TT.x++;
-  moveCursor();
+  updateLine();
 }
 
 static void startOfLine()
 {
   TT.x = 0;
-  moveCursor();
-}
-
-static void upLine()
-{
-  // Do command history stuff here.
+  updateLine();
 }
 
 // The key to command mappings.
 static struct keyCommand simpleEmacsKeys[] =
 {
-  {"Del",	backSpaceChar},
+  {"BS",	backSpaceChar},
+  {"Del",	deleteChar},
   {"^D",	deleteChar},
   {"Return",	doCommand},
-  {"Down",	downLine},
-  {"^N",	downLine},
+  {"^J",	doCommand},
+  {"^M",	doCommand},
+  {"Down",	nextHistory},
+  {"^N",	nextHistory},
   {"End",	endOfLine},
   {"^E",	endOfLine},
   {"Left",	leftChar},
@@ -149,8 +162,8 @@ static struct keyCommand simpleEmacsKeys[] =
   {"^F",	rightChar},
   {"Home",	startOfLine},
   {"^A",	startOfLine},
-  {"Up",	upLine},
-  {"^P",	upLine},
+  {"Up",	prevHistory},
+  {"^P",	prevHistory},
   {NULL, NULL}
 };
 
@@ -168,17 +181,19 @@ static int handleKeySequence(long extra, char *sequence)
     }
   }
 
-  if ((0 == sequence[1]) && isprint(sequence[0]))	// See if it's an ordinary key.
+  // See if it's ordinary keys.
+  if (isprint(sequence[0]))
   {
     if (TT.x < sizeof(toybuf))
     {
-      int j;
+      int j, l = strlen(sequence);
 
       for (j = strlen(toybuf); j >= TT.x; j--)
-        toybuf[j + 1] = toybuf[j];
-      toybuf[TT.x] = sequence[0];
-      TT.x++;
-      moveCursor();
+        toybuf[j + l] = toybuf[j];
+      for (j = 0; j < l; j++)
+        toybuf[TT.x + j] = sequence[j];
+      TT.x += l;
+      updateLine();
     }
     return 1;
   }
@@ -189,6 +204,18 @@ static int handleKeySequence(long extra, char *sequence)
 void dumbsh_main(void)
 {
   struct termios termio, oldtermio;
+  char *temp = getenv("HOME");
+  int fd;
+
+  // Load bash history.
+  temp = xmsprintf("%s/%s", temp ? temp : "", ".bash_history");
+  if (-1 != (fd = open(temp, O_RDONLY)))
+  {
+    while ((temp = get_line(fd)))  TT.current = dlist_add(&TT.current, temp);
+    close(fd);
+  }
+  if (!TT.current)
+    TT.current = dlist_add(&TT.current, "");
 
   // Grab the old terminal settings and save it.
   tcgetattr(0, &oldtermio);
@@ -205,16 +232,15 @@ void dumbsh_main(void)
   termio.c_cc[VMIN]=1;
   tcsetattr(0, TCSANOW, &termio);
 
+  // Let the mouldy old terminal mold us.
   TT.w = 80;
   TT.h = 24;
   terminal_size(&TT.w, &TT.h);
 
-  // Run the main loop.
+  updateLine();
   handle_keys(0, handleKeySequence, handleCSI);
 
-  // Restore the old terminal settings.
   tcsetattr(0, TCSANOW, &oldtermio);
-
   puts("");
   fflush(stdout);
 }
