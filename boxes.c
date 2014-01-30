@@ -296,8 +296,7 @@ sized morsels?
 */
 
 
-
-char *borderChars[][6] =
+static char *borderChars[][6] =
 {
   {"-",    "|",    "+",    "+",    "+",    "+"},     // "stick" characters.
   {"\xE2\x94\x80", "\xE2\x94\x82", "\xE2\x94\x8C", "\xE2\x94\x90", "\xE2\x94\x94", "\xE2\x94\x98"},  // UTF-8
@@ -305,7 +304,7 @@ char *borderChars[][6] =
   {"\xC4", "\xB3", "\xDA", "\xBF", "\xC0", "\xD9"}   // DOS
 };
 
-char *borderCharsCurrent[][6] =
+static char *borderCharsCurrent[][6] =
 {
   {"=",    "#",    "+",    "+",    "+",    "+"},     // "stick" characters.
   {"\xE2\x95\x90", "\xE2\x95\x91", "\xE2\x95\x94", "\xE2\x95\x97", "\xE2\x95\x9A", "\xE2\x95\x9D"},  // UTF-8
