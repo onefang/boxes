@@ -1,6 +1,6 @@
 /* boxes.c - Generic editor development sandbox.
  *
- * Copyright 2012 David Seikel <won_fang@yahoo.com>
+ * Copyright 2012 David Seikel <won_fang@yahoo.com.au>
  *
  * Not in SUSv4.  An entirely new invention, thus no web site either.
  * See -
