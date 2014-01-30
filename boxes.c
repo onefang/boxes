@@ -658,7 +658,7 @@ static box *rootBox;	// Parent of the rest of the boxes, or the only box.  Alway
 static box *currentBox;
 static view *commandLine;
 static int commandMode;
-static /*sigatomic_t*/ volatile int sigWinch;
+static volatile sig_atomic_t sigWinch;
 
 #define MEM_SIZE  128	// Chunk size for line memory allocation.
 
