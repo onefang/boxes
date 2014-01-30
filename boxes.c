@@ -922,7 +922,7 @@ void doCommand(view *view, char *command)
     {
       if (strcmp(functions[i].name, command) == 0)
       {
-        if (functions[i].handler);
+        if (functions[i].handler)
         {
           functions[i].handler(view);
           updateLine(view);
