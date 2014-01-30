@@ -32,14 +32,6 @@ config BOXES
     Stick chars means to use ASCII for the boxes instead of "graphics" characters.
 */
 
-
-/* We need to catch some signals, coz some things are only sent as
-signals.  If we use poll or select, we get the race condition from the
-signals, which can cause crashes.  Poll is preferable over select in
-general.  So I was using poll originally.  However, ppoll is Linux
-specific, and worse, needs to define the following swear words...
-*/
-#define _GNU_SOURCE
 #include "toys.h"
 
 GLOBALS(
@@ -1872,7 +1864,7 @@ Some editors have a shortcut command concept.  The smallest unique first part of
 
 void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct keyCommand * (*lineCommand)(long extra, char *command))
 {
-  struct pollfd pollfds[1];
+  fd_set selectFds;
   struct timespec timeout;
   sigset_t signalMask;
 
@@ -1906,8 +1898,8 @@ void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct key
     }
 
     // Apparently it's more portable to reset these each time.
-    memset(pollfds, 0, pollcount * sizeof(struct pollfd));
-    pollfds[0].events = POLLIN;  pollfds[0].fd = 0;
+    FD_ZERO(&selectFds);
+    FD_SET(0, &selectFds);
     timeout.tv_sec = 0;  timeout.tv_nsec = 100000000; // One tenth of a second.
 
 // TODO - A bit unstable at the moment, something makes it go into a horrid CPU eating edit line flicker mode sometimes.  And / or vi mode can crash on exit (stack smash).
@@ -1923,8 +1915,9 @@ void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct key
     }
 
     // TODO - Should only ask for a time out after we get an Escape.
-    p = ppoll(pollfds, pollcount, &timeout, &signalMask);
-    if (0 >  p)
+    // I wanted to use poll, but that would mean using ppoll, which is Linux only, and involves defining swear words to get it.
+    p = pselect(0 + 1, &selectFds, NULL, NULL, &timeout, &signalMask);
+    if (0 > p)
     {
       if (EINTR == errno)
         continue;
@@ -1941,41 +1934,37 @@ void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct key
       // TODO - Send a timer event to lineCommand().  This wont be a precise timed event, but don't think we need one.
     }
 
-    while (0 < p)
+    if (FD_ISSET(0, &selectFds))
     {
-      p--;
-      if (pollfds[p].revents & POLLIN)
+      // I am assuming that we get the input atomically, each multibyte key fits neatly into one read.
+      // If that's not true (which is entirely likely), then we have to get complicated with circular buffers and stuff, or just one byte at a time.
+      j = read(0, &buffer[buffIndex], sizeof(buffer) - (buffIndex + 1));
+      if (j < 0)      // An error happened.
       {
-        // I am assuming that we get the input atomically, each multibyte key fits neatly into one read.
-        // If that's not true (which is entirely likely), then we have to get complicated with circular buffers and stuff, or just one byte at a time.
-        j = read(pollfds[p].fd, &buffer[index], sizeof(buffer) - (index + 1));
-        if (j < 0)      // An error happened.
+        // For now, just ignore errors.
+        fprintf(stderr, "input error on %d\n", p);
+        fflush(stderr);
+      }
+      else if (j == 0)    // End of file.
+      {
+        TT.stillRunning = 0;
+        fprintf(stderr, "EOF\n");
+        for (j = 0; buffer[j + 1]; j++)
+          fprintf(stderr, "(%x), ", (int) buffer[j]);
+        fflush(stderr);
+      }
+      else
+      {
+        buffIndex += j;
+        if (sizeof(buffer) < (buffIndex + 1))  // Ran out of buffer.
         {
-          // For now, just ignore errors.
-          fprintf(stderr, "input error on %d\n", p);
-          fflush(stderr);
-        }
-        else if (j == 0)    // End of file.
-        {
-          TT.stillRunning = 0;
-          fprintf(stderr, "EOF\n");
+          fprintf(stderr, "Full buffer - %s  ->  %s\n", buffer, sequence);
           for (j = 0; buffer[j + 1]; j++)
-            fprintf(stderr, "(%x), ", (int) buffer[j]);
+            fprintf(stderr, "(%x) %c, ", (int) buffer[j], buffer[j]);
           fflush(stderr);
+          buffIndex = 0;
         }
-        else
-        {
-          index += j;
-          if (sizeof(buffer) < (index + 1))  // Ran out of buffer.
-          {
-            fprintf(stderr, "Full buffer - %s  ->  %s\n", buffer, command);
-            for (j = 0; buffer[j + 1]; j++)
-              fprintf(stderr, "(%x) %c, ", (int) buffer[j], buffer[j]);
-            fflush(stderr);
-            index = 0;
-          }
-          else  buffer[index] = 0;
-        }
+        else  buffer[buffIndex] = 0;
       }
     }
 
@@ -2878,7 +2867,7 @@ void boxes_main(void)
   // Terminals send the SIGWINCH signal when they resize.
   memset(&sigAction, 0, sizeof(sigAction));
   sigAction.sa_handler = handleSignals;
-  sigAction.sa_flags = SA_RESTART;// Useless since we are using poll.
+  sigAction.sa_flags = SA_RESTART;// Useless if we are using poll.
   if (sigaction(SIGWINCH, &sigAction, &oldSigActions))  perror_exit("can't set signal handler SIGWINCH");
   terminal_size(&W, &H);
   if (toys.optflags & FLAG_w)
