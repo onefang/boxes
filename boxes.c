@@ -1799,7 +1799,7 @@ static void lineChar(long extra, char *buffer)
   updateLine(view);
 }
 
-static struct keyCommand * lineCommand(long extra, char *command)
+static struct keyCommand * lineCommand(long extra, char *sequence)
 {
   struct _view *view = (struct _view *) extra;		// Though we pretty much stomp on this straight away.
 
@@ -1807,7 +1807,7 @@ static struct keyCommand * lineCommand(long extra, char *command)
   if (commandMode)	view = commandLine;
   else		view = currentBox->view;
 
-  doCommand(view, command);
+  doCommand(view, sequence);
 
   // This is using the currentBox instead of view, coz the command line keys are part of the box context now, not separate.
   return currentBox->view->content->context->modes[currentBox->view->mode].keys;
@@ -1862,22 +1862,22 @@ Some editors have a shortcut command concept.  The smallest unique first part of
   A further complication is if we are not implementing some commands that might change what is "shortest unique prefix".
 */
 
-void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct keyCommand * (*lineCommand)(long extra, char *command))
+void handle_keys(long extra, void (*lineChar)(long extra, char *buffer), struct keyCommand * (*lineCommand)(long extra, char *sequence))
 {
   fd_set selectFds;
   struct timespec timeout;
   sigset_t signalMask;
 
   // Get the initial command set.
-  struct keyCommand *ourKeys = lineCommand(extra, "");
-  char buffer[20], command[20], csFinal[8];
-  int csi = 0, csCount = 0, csIndex = 0, csParams[8], index = 0, pollcount = 1;
+  struct keyCommand *commands = lineCommand(extra, "");
+  char buffer[20], sequence[20], csFinal[8];
+  int csi = 0, csCount = 0, csIndex = 0, csParams[8], buffIndex = 0;
 // TODO - multiline editLine is an advanced feature.  Editing boxes just moves the editLine up and down.
 //  uint16_t h = 1;
 // TODO - should check if it's at the top of the box, then grow it down instead of up if so.
 
   buffer[0] = 0;
-  command[0] = 0;
+  sequence[0] = 0;
 
   sigemptyset(&signalMask);
   sigaddset(&signalMask, SIGWINCH);
@@ -1887,9 +1887,9 @@ void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct key
   while (TT.stillRunning)
   {
     int j, p;
-    char *found = NULL;
+    char *command = NULL;
 
-    if (0 == index)
+    if (0 == buffIndex)
     {
       buffer[0] = 0;
       csi = 0;
@@ -1925,11 +1925,11 @@ void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct key
     }
     if (0 == p)          // A timeout, trigger a time event.
     {
-      if ((1 == index) && ('\x1B' == buffer[0]))
+      if ((1 == buffIndex) && ('\x1B' == buffer[0]))
       {
         // After a short delay to check, this is a real Escape key, not part of an escape sequence, so deal with it.
-        strcpy(command, "^[");
-        index = 0;
+        strcpy(sequence, "^[");
+        buffIndex = 0;
       }
       // TODO - Send a timer event to lineCommand().  This wont be a precise timed event, but don't think we need one.
     }
@@ -1980,7 +1980,7 @@ void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct key
       buffer[0] = '\x9B';
       for (j = 1; buffer[j]; j++)
         buffer[j] = buffer[j + 1];
-      index--;
+      buffIndex--;
       csi = 1;
     }
 
@@ -1991,8 +1991,8 @@ void editLine(long extra, void (*lineChar)(long extra, char *buffer), struct key
     {
       if (strcmp(keys[j].code, buffer) == 0)
       {
-        strcat(command, keys[j].name);
-        index = 0;
+        strcat(sequence, keys[j].name);
+        buffIndex = 0;
         csi = 0;
         break;
       }
@@ -2030,9 +2030,8 @@ TODO	    So abort the current CSI and start from scratch.
       }
       else
       {
-        // TODO - Using rindex here, coz index is a variable in this scope.  Should rename index.
         // Check for the private bit.
-        if (rindex("<=>?", buffer[1]))
+        if (index("<=>?", buffer[1]))
         {
           csFinal[0] = buffer[1];
           csFinal[1] = 0;
@@ -2044,7 +2043,7 @@ TODO	    So abort the current CSI and start from scratch.
         do
         {
           // So we know when we get to the end of parameter space.
-          t = rindex("01234567890:;<=>?", buffer[j + 1]);
+          t = index("01234567890:;<=>?", buffer[j + 1]);
           // See if we passed a paremeter.
           if ((';' == buffer[j]) || (!t))
           {
@@ -2072,7 +2071,7 @@ TODO	    So abort the current CSI and start from scratch.
           {
             t = CSI_terminators[j].func(extra, csParams, csCount);
             if (t)
-              strcpy(command, t);
+              strcpy(sequence, t);
             break;
           }
         }
@@ -2080,55 +2079,57 @@ TODO	    So abort the current CSI and start from scratch.
 
       csi = 0;
       // Wether or not it's a CSI we understand, it's been handled either here or in the key sequence scanning above.
-      index = 0;
+      buffIndex = 0;
     }
 
     // See if it's an ordinary key,
-    if ((1 == index) && isprint(buffer[0]))
+    if ((1 == buffIndex) && isprint(buffer[0]))
     {
       // Here we want to run it through the command finder first, and only "insert" it if it's not a command.
-      for (j = 0; ourKeys[j].key; j++)
+      // Yes, this is duplicated below.
+      for (j = 0; commands[j].key; j++)
       {
-        if (strcmp(ourKeys[j].key, buffer) == 0)
+        if (strcmp(commands[j].key, buffer) == 0)
         {
-          strcpy(command, buffer);
-          found = command;
+          strcpy(sequence, buffer);
+          command = sequence;
           break;
         }
       }
-      if (NULL == found)
+      if (NULL == command)
       {
-        // If there's an outstanding command, add this to the end of it.
-        if (command[0])  strcat(command, buffer);
+        // If there's an outstanding sequence, add this to the end of it.
+        if (sequence[0])  strcat(sequence, buffer);
         else             lineChar(extra, buffer);
       }
-      index = 0;
+      buffIndex = 0;
     }
 
-    if (command[0])        // Search for a bound key.
+    // Search for a key sequence bound to a command.
+    if (sequence[0])
     {
-      if (sizeof(command) < (strlen(command) + 1))
+      if (sizeof(sequence) < (strlen(sequence) + 1))
       {
-        fprintf(stderr, "Full command buffer - %s \n", command);
+        fprintf(stderr, "Full key sequence buffer - %s \n", sequence);
         fflush(stderr);
-        command[0] = 0;
+        sequence[0] = 0;
       }
 
-      if (NULL == found)
+      if (NULL == command)
       {
-        for (j = 0; ourKeys[j].key; j++)
+        for (j = 0; commands[j].key; j++)
         {
-          if (strcmp(ourKeys[j].key, command) == 0)
+          if (strcmp(commands[j].key, sequence) == 0)
           {
-            found = ourKeys[j].command;
+            command = commands[j].command;
             break;
           }
         }
       }
-      if (found)
+      if (command)
       {
-        ourKeys = lineCommand(extra, found);
-        command[0] = 0;
+        commands = lineCommand(extra, command);
+        sequence[0] = 0;
       }
     }
   }
@@ -2909,7 +2910,7 @@ void boxes_main(void)
   updateLine(currentBox->view);
 
   // Run the main loop.
-  editLine((long) currentBox->view, lineChar, lineCommand);
+  handle_keys((long) currentBox->view, lineChar, lineCommand);
 
   // TODO - Should remember to turn off mouse reporting when we leave.
 
