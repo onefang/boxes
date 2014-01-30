@@ -494,7 +494,7 @@ typedef struct _view view;
 
 typedef void (*boxFunction) (box *box);
 typedef void (*eventHandler) (view *view);
-typedef char *(*CSIhandler) (long extra, int *code, int count);
+typedef void (*CSIhandler) (long extra, int *code, int count);
 
 struct function
 {
@@ -1786,37 +1786,7 @@ void nop(view *view)
 }
 
 
-static void lineChar(long extra, char *buffer)
-{
-  struct _view *view = (struct _view *) extra;		// Though we pretty much stomp on this straight away.
-
-  // Coz things might change out from under us, find the current view.
-  if (commandMode)	view = commandLine;
-  else		view = currentBox->view;
-
-  // TODO - Should check for tabs to, and insert them.
-  //        Though better off having a function for that?
-  mooshStrings(view->line, buffer, view->iX, 0, !TT.overWriteMode);
-  view->oW = formatLine(view, view->line->line, &(view->output));
-  moveCursorRelative(view, strlen(buffer), 0, 0, 0);
-  updateLine(view);
-}
-
-static struct keyCommand * lineCommand(long extra, char *sequence)
-{
-  struct _view *view = (struct _view *) extra;		// Though we pretty much stomp on this straight away.
-
-  // Coz things might change out from under us, find the current view.
-  if (commandMode)	view = commandLine;
-  else		view = currentBox->view;
-
-  doCommand(view, sequence);
-
-  // This is using the currentBox instead of view, coz the command line keys are part of the box context now, not separate.
-  return currentBox->view->content->context->modes[currentBox->view->mode].keys;
-}
-
-char *termSize(long extra, int *params, int count)
+static void termSize(long extra, int *params, int count)
 {
   struct _view *view = (struct _view *) extra;		// Though we pretty much stomp on this straight away.
   int r = params[0], c = params[1];
@@ -1840,8 +1810,6 @@ char *termSize(long extra, int *params, int count)
     else		view = currentBox->view;
     updateLine(view);
   }
-
-  return NULL;
 }
 
 struct CSI
@@ -1856,21 +1824,54 @@ struct CSI CSI_terminators[] =
   {NULL, NULL}
 };
 
+static int handleKeySequence(long extra, char *sequence)
+{
+  struct _view *view = (struct _view *) extra;		// Though we pretty much stomp on this straight away.
+  struct keyCommand *commands = currentBox->view->content->context->modes[currentBox->view->mode].keys;
+  int j;
+
+  // Coz things might change out from under us, find the current view.
+  if (commandMode)	view = commandLine;
+  else		view = currentBox->view;
+
+  // Search for a key sequence bound to a command.
+  for (j = 0; commands[j].key; j++)
+  {
+    if (strcmp(commands[j].key, sequence) == 0)
+    {
+      doCommand(view, commands[j].command);
+      return 1;
+    }
+  }
+
+  if ((0 == sequence[1]) && isprint(sequence[0]))	// See if it's an ordinary key.
+  {
+    // TODO - Should check for tabs to, and insert them.
+    //        Though better off having a function for that?
+    mooshStrings(view->line, sequence, view->iX, 0, !TT.overWriteMode);
+    view->oW = formatLine(view, view->line->line, &(view->output));
+    moveCursorRelative(view, strlen(sequence), 0, 0, 0);
+    updateLine(view);
+    return 1;
+  }
+
+  return 0;
+}
+
 // Basically this is the main loop.
 
 // TODO - Unhandled complications -
 //   Less and more have the "ZZ" command, but nothing else seems to have multi ordinary character commands.
 
-void handle_keys(long extra, void (*lineChar)(long extra, char *buffer), struct keyCommand * (*lineCommand)(long extra, char *sequence))
+void handle_keys(long extra, int (*handle_sequence)(long extra, char *sequence))
 {
   fd_set selectFds;
   struct timespec timeout;
   sigset_t signalMask;
 
   // Get the initial command set.
-  struct keyCommand *commands = lineCommand(extra, "");
   char buffer[20], sequence[20], csFinal[8];
-  int csi = 0, csCount = 0, csIndex = 0, csParams[8], buffIndex = 0;
+  int buffIndex = 0;
 // TODO - multiline editLine is an advanced feature.  Editing boxes just moves the editLine up and down.
 //  uint16_t h = 1;
 // TODO - should check if it's at the top of the box, then grow it down instead of up if so.
@@ -1885,16 +1886,7 @@ void handle_keys(long extra, void (*lineChar)(long extra, char *buffer), struct 
   TT.stillRunning = 1;
   while (TT.stillRunning)
   {
-    int j, p;
-    char *command = NULL;
-
-    if (0 == buffIndex)
-    {
-      buffer[0] = 0;
-      csi = 0;
-      csCount = 0;
-      csIndex = 0;
-    }
+    int j, p, csi = 0;
 
     // Apparently it's more portable to reset these each time.
     FD_ZERO(&selectFds);
@@ -1913,7 +1905,7 @@ void handle_keys(long extra, void (*lineChar)(long extra, char *buffer), struct 
       sigWinch = 0;
     }
 
-    // TODO - Should only ask for a time out after we get an Escape.
+    // TODO - Should only ask for a time out after we get an Escape, or the user requested time ticks.
     // I wanted to use poll, but that would mean using ppoll, which is Linux only, and involves defining swear words to get it.
     p = pselect(0 + 1, &selectFds, NULL, NULL, &timeout, &signalMask);
     if (0 > p)
@@ -1922,18 +1914,18 @@ void handle_keys(long extra, void (*lineChar)(long extra, char *buffer), struct 
         continue;
       perror_exit("poll");
     }
-    if (0 == p)          // A timeout, trigger a time event.
+    else if (0 == p)          // A timeout, trigger a time event.
     {
-      if ((1 == buffIndex) && ('\x1B' == buffer[0]))
+      if ((0 == buffer[1]) && ('\x1B' == buffer[0]))
       {
         // After a short delay to check, this is a real Escape key, not part of an escape sequence, so deal with it.
+        // TODO - so far the only uses of this have the escape at the start, but maybe a strcat is needed instead later?
         strcpy(sequence, "^[");
-        buffIndex = 0;
+        buffer[0] = buffIndex = 0;
       }
-      // TODO - Send a timer event to lineCommand().  This wont be a precise timed event, but don't think we need one.
+      // TODO - Call some sort of timer tick callback.  This wont be a precise timed event, but don't think we need one.
     }
-
-    if (FD_ISSET(0, &selectFds))
+    else if ((0 < p) && FD_ISSET(0, &selectFds))
     {
       // I am assuming that we get the input atomically, each multibyte key fits neatly into one read.
       // If that's not true (which is entirely likely), then we have to get complicated with circular buffers and stuff, or just one byte at a time.
@@ -1963,7 +1955,7 @@ void handle_keys(long extra, void (*lineChar)(long extra, char *buffer), struct 
           fflush(stderr);
           buffIndex = 0;
         }
-        else  buffer[buffIndex] = 0;
+        buffer[buffIndex] = 0;
       }
     }
 
@@ -1991,7 +1983,7 @@ void handle_keys(long extra, void (*lineChar)(long extra, char *buffer), struct 
       if (strcmp(keys[j].code, buffer) == 0)
       {
         strcat(sequence, keys[j].name);
-        buffIndex = 0;
+        buffer[0] = buffIndex = 0;
         csi = 0;
         break;
       }
@@ -2015,9 +2007,10 @@ TODO	    So abort the current CSI and start from scratch.
       */
 
       char *t;
+      int csIndex = 1, csParams[8];
 
-      csIndex = 1;
       csFinal[0] = 0;
+      p = 0;
       // Unspecified params default to a value that is command dependant.
       // However, they will never be negative, so we can use -1 to flag a default value.
       for (j = 0; j < (sizeof(csParams) / sizeof(*csParams)); j++)
@@ -2053,9 +2046,9 @@ TODO	    So abort the current CSI and start from scratch.
             if (';' != buffer[csIndex] || (!t))
             {
               // TODO - Might be ":" in the number somewhere, but we are not expecting any in anything we do.
-              csParams[csCount] = atoi(&buffer[csIndex]);
+              csParams[p] = atoi(&buffer[csIndex]);
             }
-            csCount++;
+            p++;
             csIndex = j + 1;
           }
           j++;
@@ -2068,9 +2061,7 @@ TODO	    So abort the current CSI and start from scratch.
         {
           if (strcmp(CSI_terminators[j].code, csFinal) == 0)
           {
-            t = CSI_terminators[j].func(extra, csParams, csCount);
-            if (t)
-              strcpy(sequence, t);
+            CSI_terminators[j].func(extra, csParams, p);
             break;
           }
         }
@@ -2078,57 +2069,19 @@ TODO	    So abort the current CSI and start from scratch.
 
       csi = 0;
       // Wether or not it's a CSI we understand, it's been handled either here or in the key sequence scanning above.
-      buffIndex = 0;
+      buffer[0] = buffIndex = 0;
     }
 
-    // See if it's an ordinary key,
-    if ((1 == buffIndex) && isprint(buffer[0]))
+    // Pass the result to the callback.
+    if (sequence[0] || buffer[0])
     {
-      // Here we want to run it through the command finder first, and only "insert" it if it's not a command.
-      // Yes, this is duplicated below.
-      for (j = 0; commands[j].key; j++)
-      {
-        if (strcmp(commands[j].key, buffer) == 0)
-        {
-          strcpy(sequence, buffer);
-          command = sequence;
-          break;
-        }
-      }
-      if (NULL == command)
-      {
-        // If there's an outstanding sequence, add this to the end of it.
-        if (sequence[0])  strcat(sequence, buffer);
-        else             lineChar(extra, buffer);
-      }
-      buffIndex = 0;
-    }
+      char b[strlen(sequence) + strlen(buffer) + 1];
 
-    // Search for a key sequence bound to a command.
-    if (sequence[0])
-    {
-      if (sizeof(sequence) < (strlen(sequence) + 1))
+      sprintf(b, "%s%s", sequence, buffer);
+      if (handle_sequence(extra, b))
       {
-        fprintf(stderr, "Full key sequence buffer - %s \n", sequence);
-        fflush(stderr);
         sequence[0] = 0;
-      }
-
-      if (NULL == command)
-      {
-        for (j = 0; commands[j].key; j++)
-        {
-          if (strcmp(commands[j].key, sequence) == 0)
-          {
-            command = commands[j].command;
-            break;
-          }
-        }
-      }
-      if (command)
-      {
-        commands = lineCommand(extra, command);
-        sequence[0] = 0;
+        buffer[0] = buffIndex = 0;
       }
     }
   }
@@ -2908,7 +2861,7 @@ void boxes_main(void)
   updateLine(currentBox->view);
 
   // Run the main loop.
-  handle_keys((long) currentBox->view, lineChar, lineCommand);
+  handle_keys((long) currentBox->view, handleKeySequence);
 
   // TODO - Should remember to turn off mouse reporting when we leave.
 
