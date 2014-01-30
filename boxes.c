@@ -494,7 +494,6 @@ typedef struct _view view;
 
 typedef void (*boxFunction) (box *box);
 typedef void (*eventHandler) (view *view);
-typedef void (*CSIhandler) (long extra, int *code, int count);
 
 struct function
 {
@@ -1785,6 +1784,14 @@ void nop(view *view)
 }
 
 
+typedef void (*CSIhandler) (long extra, int *code, int count);
+
+struct CSI
+{
+  char *code;
+  CSIhandler func;
+};
+
 static void termSize(long extra, int *params, int count)
 {
   struct _view *view = (struct _view *) extra;		// Though we pretty much stomp on this straight away.
@@ -1811,17 +1818,25 @@ static void termSize(long extra, int *params, int count)
   }
 }
 
-struct CSI
+struct CSI CSIcommands[] =
 {
-  char *code;
-  CSIhandler func;
+  {"R", termSize}	// Parameters are cursor line and column.  Note this may be sent at other times, not just during terminal resize.
 };
 
-struct CSI CSI_terminators[] =
+static void handleCSI(long extra, char *command, int *params, int count)
 {
-  {"R", termSize},	// Parameters are cursor line and column.  Note this may be sent at other times, not just during terminal resize.
-  {NULL, NULL}
-};
+  int j;
+
+  for (j = 0; j < (sizeof(CSIcommands) / sizeof(*CSIcommands)); j++)
+  {
+    if (strcmp(CSIcommands[j].code, command) == 0)
+    {
+      CSIcommands[j].func(extra, params, count);
+      break;
+    }
+  }
+}
+
 
 static int handleKeySequence(long extra, char *sequence)
 {
@@ -1870,7 +1885,7 @@ static void handleSignals(int signo)
 // TODO - Unhandled complications -
 //   Less and more have the "ZZ" command, but nothing else seems to have multi ordinary character commands.
 
-void handle_keys(long extra, int (*handle_sequence)(long extra, char *sequence))
+void handle_keys(long extra, int (*handle_sequence)(long extra, char *sequence), void (*handle_CSI)(long extra, char *command, int *params, int count))
 {
   fd_set selectFds;
   struct timespec timeout;
@@ -2063,16 +2078,10 @@ TODO	    So abort the current CSI and start from scratch.
         }
         while (t);
 
-        // Get the final command sequence, and search for it.
+        // Get the final command sequence, and pass it to the callback.
         strcat(csFinal, &buffer[csIndex]);
-        for (j = 0; CSI_terminators[j].code; j++)
-        {
-          if (strcmp(CSI_terminators[j].code, csFinal) == 0)
-          {
-            CSI_terminators[j].func(extra, csParams, p);
-            break;
-          }
-        }
+        if (handle_CSI)
+          handle_CSI(extra, csFinal, csParams, p);
       }
 
       csi = 0;
@@ -2081,7 +2090,7 @@ TODO	    So abort the current CSI and start from scratch.
     }
 
     // Pass the result to the callback.
-    if (sequence[0] || buffer[0])
+    if ((handle_sequence) && (sequence[0] || buffer[0]))
     {
       char b[strlen(sequence) + strlen(buffer) + 1];
 
@@ -2860,7 +2869,7 @@ void boxes_main(void)
   updateLine(currentBox->view);
 
   // Run the main loop.
-  handle_keys((long) currentBox->view, handleKeySequence);
+  handle_keys((long) currentBox->view, handleKeySequence, handleCSI);
 
   // TODO - Should remember to turn off mouse reporting when we leave.
 
