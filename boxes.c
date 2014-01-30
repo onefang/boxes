@@ -658,7 +658,6 @@ static box *rootBox;	// Parent of the rest of the boxes, or the only box.  Alway
 static box *currentBox;
 static view *commandLine;
 static int commandMode;
-static volatile sig_atomic_t sigWinch;
 
 #define MEM_SIZE  128	// Chunk size for line memory allocation.
 
@@ -1858,6 +1857,14 @@ static int handleKeySequence(long extra, char *sequence)
   return 0;
 }
 
+
+static volatile sig_atomic_t sigWinch;
+
+static void handleSignals(int signo)
+{
+    sigWinch = 1;
+}
+
 // Basically this is the main loop.
 
 // TODO - Unhandled complications -
@@ -1867,12 +1874,19 @@ void handle_keys(long extra, int (*handle_sequence)(long extra, char *sequence))
 {
   fd_set selectFds;
   struct timespec timeout;
+  struct sigaction sigAction, oldSigAction;
   sigset_t signalMask;
   char buffer[20], sequence[20];
   int buffIndex = 0;
 
   buffer[0] = 0;
   sequence[0] = 0;
+
+  // Terminals send the SIGWINCH signal when they resize.
+  memset(&sigAction, 0, sizeof(sigAction));
+  sigAction.sa_handler = handleSignals;
+  sigAction.sa_flags = SA_RESTART;// Useless if we are using poll.
+  if (sigaction(SIGWINCH, &sigAction, &oldSigAction))  perror_exit("can't set signal handler SIGWINCH");
   sigemptyset(&signalMask);
   sigaddset(&signalMask, SIGWINCH);
 
@@ -2079,6 +2093,8 @@ TODO	    So abort the current CSI and start from scratch.
       }
     }
   }
+
+  sigaction(SIGWINCH, &oldSigAction, NULL);
 }
 
 
@@ -2718,18 +2734,12 @@ struct context simpleVi =
 // TODO - have any unrecognised escape key sequence start up a new box (split one) to show the "show keys" content.
 // That just adds each "Key is X" to the end of the content, and allows scrolling, as well as switching between other boxes.
 
-static void handleSignals(int signo)
-{
-    sigWinch = 1;
-}
-
 void boxes_main(void)
 {
   struct context *context = &simpleMcedit;  // The default is mcedit, coz that's what I use.
   struct termios termio, oldtermio;
   char *prompt = "Enter a command : ";
   unsigned W = 80, H = 24;
-  struct sigaction sigAction, oldSigActions;
 
   // For testing purposes, figure out which context we use.  When this gets real, the toybox multiplexer will sort this out for us instead.
   if (toys.optflags & FLAG_m)
@@ -2810,11 +2820,6 @@ void boxes_main(void)
   termio.c_cc[VMIN]=1;
   tcsetattr(0, TCSANOW, &termio);
 
-  // Terminals send the SIGWINCH signal when they resize.
-  memset(&sigAction, 0, sizeof(sigAction));
-  sigAction.sa_handler = handleSignals;
-  sigAction.sa_flags = SA_RESTART;// Useless if we are using poll.
-  if (sigaction(SIGWINCH, &sigAction, &oldSigActions))  perror_exit("can't set signal handler SIGWINCH");
   terminal_size(&W, &H);
   if (toys.optflags & FLAG_w)
     W = TT.w;
@@ -2858,8 +2863,6 @@ void boxes_main(void)
   handle_keys((long) currentBox->view, handleKeySequence);
 
   // TODO - Should remember to turn off mouse reporting when we leave.
-
-  sigaction(SIGWINCH, &oldSigActions, NULL);
 
   // Restore the old terminal settings.
   tcsetattr(0, TCSANOW, &oldtermio);
