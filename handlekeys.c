@@ -2,7 +2,13 @@
  *
  * Copyright 2012 David Seikel <won_fang@yahoo.com.au>
  */
- 
+
+// I use camelCaseNames internally, instead of underscore_names as is preferred
+// in the rest of toybox.  A small limit of 80 characters per source line infers
+// shorter names should be used.  CamelCaseNames are shorter.  Externally visible
+// stuff is underscore_names as usual.  Plus, I'm used to camelCaseNames, my
+// fingers twitch that way.
+
 #include "toys.h"
 #include "handlekeys.h"
 
