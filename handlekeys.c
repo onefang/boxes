@@ -304,6 +304,7 @@ void handle_keys(long extra, int (*handle_sequence)(long extra, char *sequence),
     // For a real timeout checked Esc, buffer is now empty, so this for loop wont find it anyway.
     // While it's true we could avoid it by checking, the user already had to wait for a time out, and this loop wont take THAT long.
     for (j = 0; keys[j].code; j++)    // Search for multibyte keys and control keys.
+    for (j = 0; j < (sizeof(keys) / sizeof(*keys)); j++)
     {
       if (strcmp(keys[j].code, buffer) == 0)
       {
