@@ -232,7 +232,7 @@ void handle_keys(long extra, int (*handle_sequence)(long extra, char *sequence),
 
     // TODO - Should only ask for a time out after we get an Escape, or the user requested time ticks.
     // I wanted to use poll, but that would mean using ppoll, which is Linux only, and involves defining swear words to get it.
-    p = pselect(0 + 1, &selectFds, NULL, NULL, &timeout, &signalMask);
+    p = pselect(0 + 1, &selectFds, NULL, NULL, &timeOut, &signalMask);
     if (0 > p)
     {
       if (EINTR == errno)
