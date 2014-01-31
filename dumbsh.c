@@ -1,4 +1,4 @@
-/* dumbsh.c - A really dumb shell, to demonstrate handlekeys usage.
+/* dumbsh.c - A really dumb shell, to demonstrate handle_keys usage.
  *
  * Copyright 2014 David Seikel <won_fang@yahoo.com.au>
  *
@@ -30,7 +30,7 @@ struct keyCommand
 GLOBALS(
   unsigned h, w;
   int x, y;
-  struct double_list *current;
+  struct double_list *history;
 )
 
 #define TT this.dumbsh
@@ -115,16 +115,16 @@ static void leftChar()
 
 static void nextHistory()
 {
-  TT.current = TT.current->next;
-  strcpy(toybuf, TT.current->data);
+  TT.history = TT.history->next;
+  strcpy(toybuf, TT.history->data);
   TT.x = strlen(toybuf);
   updateLine();
 }
 
 static void prevHistory()
 {
-  TT.current = TT.current->prev;
-  strcpy(toybuf, TT.current->data);
+  TT.history = TT.history->prev;
+  strcpy(toybuf, TT.history->data);
   TT.x = strlen(toybuf);
   updateLine();
 }
@@ -208,34 +208,38 @@ static int handleKeySequence(long extra, char *sequence)
 
 void dumbsh_main(void)
 {
-  struct termios termio, oldtermio;
-  char *temp = getenv("HOME");
+  struct termios termIo, oldTermIo;
+  char *t = getenv("HOME");
   int fd;
 
   // Load bash history.
-  temp = xmsprintf("%s/%s", temp ? temp : "", ".bash_history");
-  if (-1 != (fd = open(temp, O_RDONLY)))
+  t = xmsprintf("%s/%s", t ? t : "", ".bash_history");
+  if (-1 != (fd = open(t, O_RDONLY)))
   {
-    while ((temp = get_line(fd)))  TT.current = dlist_add(&TT.current, temp);
+    while ((t = get_line(fd)))  TT.history = dlist_add(&TT.history, t);
     close(fd);
   }
-  if (!TT.current)
-    TT.current = dlist_add(&TT.current, "");
+  if (!TT.history)
+    TT.history = dlist_add(&TT.history, "");
 
   // Grab the old terminal settings and save it.
-  tcgetattr(0, &oldtermio);
+  tcgetattr(0, &oldTermIo);
   tcflush(0, TCIFLUSH);
-  termio = oldtermio;
+  termIo = oldTermIo;
 
   // Mould the terminal to our will.
-  termio.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IUCLC | IXON | IXOFF | IXANY);
-  termio.c_oflag &= ~OPOST;
-  termio.c_lflag &= ~(ECHO | ECHOE | ECHOK | ECHONL | TOSTOP | ICANON | ISIG | IEXTEN);
-  termio.c_cflag &= ~(CSIZE | PARENB);
-  termio.c_cflag |= CS8;
-  termio.c_cc[VTIME]=0;  // deciseconds.
-  termio.c_cc[VMIN]=1;
-  tcsetattr(0, TCSANOW, &termio);
+  // In this example we are turning off all the terminal smarts, but real code
+  // might not want that.
+  termIo.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL
+                     | IUCLC | IXON | IXOFF | IXANY);
+  termIo.c_oflag &= ~OPOST;
+  termIo.c_lflag &= ~(ECHO | ECHOE | ECHOK | ECHONL | TOSTOP | ICANON | ISIG
+                     | IEXTEN);
+  termIo.c_cflag &= ~(CSIZE | PARENB);
+  termIo.c_cflag |= CS8;
+  termIo.c_cc[VTIME]=0;  // deciseconds.
+  termIo.c_cc[VMIN]=1;
+  tcsetattr(0, TCSANOW, &termIo);
 
   // Let the mouldy old terminal mold us.
   TT.w = 80;
@@ -245,7 +249,7 @@ void dumbsh_main(void)
   updateLine();
   handle_keys(0, handleKeySequence, handleCSI);
 
-  tcsetattr(0, TCSANOW, &oldtermio);
+  tcsetattr(0, TCSANOW, &oldTermIo);
   puts("");
   fflush(stdout);
 }
