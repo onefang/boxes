@@ -168,8 +168,7 @@ static struct keyCommand simpleEmacsKeys[] =
   {"Home",	startOfLine},
   {"^A",	startOfLine},
   {"Up",	prevHistory},
-  {"^P",	prevHistory},
-  {NULL, NULL}
+  {"^P",	prevHistory}
 };
 
 static int handleKeySequence(long extra, char *sequence)
@@ -177,7 +176,7 @@ static int handleKeySequence(long extra, char *sequence)
   int j;
 
   // Search for a key sequence bound to a command.
-  for (j = 0; simpleEmacsKeys[j].key; j++)
+  for (j = 0; j < (sizeof(simpleEmacsKeys) / sizeof(*simpleEmacsKeys)); j++)
   {
     if (strcmp(simpleEmacsKeys[j].key, sequence) == 0)
     {
