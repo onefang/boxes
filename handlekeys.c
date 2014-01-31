@@ -174,18 +174,7 @@ static struct key keys[] =
   {"\x1B\x37",		"F7"},
   {"\x1B\x38",		"F8"},
   {"\x1B\x39",		"F9"},
-  {"\x1B\x30",		"F10"},
-
-/* TODO - Rob says -
-...you don't need a NULL terminator for  
-an array, you can do sizeof(table)/sizeof(*table). Divide the size of  
-the table (in bytes) by the size of a member of the table (in bytes) to  
-get the number of entries.
-
-I should try that trick.  Seems to work, let's do that everywhere.
-*/
-
-  {NULL, NULL}
+  {"\x1B\x30",		"F10"}
 };
 
 static volatile sig_atomic_t sigWinch;
