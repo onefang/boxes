@@ -319,18 +319,27 @@ void handle_keys(long extra, int (*handle_sequence)(long extra, char *sequence),
     if (csi)
     {
       /* ECMA-048 section 5.2 defines this, and is unreadable.
-	General CSI format - CSI [private] n1 ; n2 [extra] final
-	    private	0x3c to 0x3f  "<=>?" if first byte is one of these, this is a private command, if it's one of the other n1 ones, it's not private.
-	    n1		0x30 to 0x3f  "01234567890:;<=>?" ASCII digits forming a "number"
-			0x3a [:] used for floats, not expecting any.  Could also be used as some other sort of inter digit separator.
-			0x3b [;] separates the parameters
-	    extra	0x20 to 0x2f  [ !"#$%&'()*+,-./]  Can be multiple, likely isn't.
-	    final	0x40 to 0x7e  "@A .. Z[\]^_`a .. z{|}~" it's private if 0x70 to 0x7e "p .. z{|}~"
-		Though the "private" ~ is used for key codes.
-		    We also have SS3 "\x1BO" for other keys, but that's not a CSI.
-	  C0 controls, DEL (0x7f), or high characters are undefined.
-TODO	    So abort the current CSI and start from scratch.
-      */
+       * General CSI format - CSI [private] n1 ; n2 [extra] final
+       *   private  0x3c to 0x3f  "<=>?" If first byte is one of these,
+       *                                 this is a private command, if it's
+       *                                 one of the other n1 ones,
+       *                                 it's not private.
+       *   n1       0x30 to 0x3f  "01234567890:;<=>?"
+       *                                 ASCII digits forming a "number"
+       *            0x3a          ":"    Used for floats, not expecting any.
+       *                                 Could also be used as some other sort of
+       *                                 inter digit separator.
+       *            0x3b [;]             Separates the parameters.
+       *   extra    0x20 to 0x2f  [ !"#$%&'()*+,-./]
+       *                                 Can be multiple, likely isn't.
+       *   final    0x40 to 0x7e  "@A .. Z[\]^_`a .. z{|}~"
+       *                                  It's private if 0x70 to 0x7e "p .. z{|}~"
+       *                                  Though the "private" ~ is used for key codes.
+       *                                  We also have SS3 "\x1BO" for other keys,
+       *                                  but that's not a CSI.
+       * C0 controls, DEL (0x7f), or high characters are undefined.
+       * TODO - So abort the current CSI and start from scratch on one of those.
+       */
 
       if ('M' == buffer[1])
       {
