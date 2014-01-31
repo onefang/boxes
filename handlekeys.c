@@ -331,22 +331,24 @@ void handle_keys(long extra, int (*handle_sequence)(long extra, char *sequence),
 TODO	    So abort the current CSI and start from scratch.
       */
 
-      char *t, csFinal[8];
-      int csIndex = 1, csParams[8];
-
-      csFinal[0] = 0;
-      p = 0;
-      // Unspecified params default to a value that is command dependant.
-      // However, they will never be negative, so we can use -1 to flag a default value.
-      for (j = 0; j < (sizeof(csParams) / sizeof(*csParams)); j++)
-        csParams[j] = -1;
-
       if ('M' == buffer[1])
       {
         // TODO - We have a mouse report, which is CSI M ..., where the rest is binary encoded, more or less.  Not fitting into the CSI format.
       }
       else
       {
+        char *t, csFinal[8];
+        int csIndex = 1, csParams[8];
+
+        csFinal[0] = 0;
+        p = 0;
+
+        // Unspecified params default to a value that is command dependant.
+        // However, they will never be negative, so we can use -1 to flag
+        // a default value.
+        for (j = 0; j < (sizeof(csParams) / sizeof(*csParams)); j++)
+          csParams[j] = -1;
+
         // Check for the private bit.
         if (index("<=>?", buffer[1]))
         {
