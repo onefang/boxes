@@ -180,7 +180,7 @@ static struct key keys[] =
 static volatile sig_atomic_t sigWinch;
 static int stillRunning;
 
-static void handleSignals(int signo)
+static void handleSIGWINCH(int signalNumber)
 {
     sigWinch = 1;
 }
@@ -190,7 +190,7 @@ static void handleSignals(int signo)
 void handle_keys(long extra, int (*handle_sequence)(long extra, char *sequence), void (*handle_CSI)(long extra, char *command, int *params, int count))
 {
   fd_set selectFds;
-  struct timespec timeout;
+  struct timespec timeOut;
   struct sigaction sigAction, oldSigAction;
   sigset_t signalMask;
   char buffer[20], sequence[20];
@@ -201,9 +201,9 @@ void handle_keys(long extra, int (*handle_sequence)(long extra, char *sequence),
 
   // Terminals send the SIGWINCH signal when they resize.
   memset(&sigAction, 0, sizeof(sigAction));
-  sigAction.sa_handler = handleSignals;
   sigAction.sa_flags = SA_RESTART;// Useless if we are using poll.
   if (sigaction(SIGWINCH, &sigAction, &oldSigAction))  perror_exit("can't set signal handler SIGWINCH");
+  sigAction.sa_handler = handleSIGWINCH;
   sigemptyset(&signalMask);
   sigaddset(&signalMask, SIGWINCH);
 
@@ -216,7 +216,7 @@ void handle_keys(long extra, int (*handle_sequence)(long extra, char *sequence),
     // Apparently it's more portable to reset these each time.
     FD_ZERO(&selectFds);
     FD_SET(0, &selectFds);
-    timeout.tv_sec = 0;  timeout.tv_nsec = 100000000; // One tenth of a second.
+    timeOut.tv_sec = 0;  timeOut.tv_nsec = 100000000; // One tenth of a second.
 
 // TODO - A bit unstable at the moment, something makes it go into a horrid CPU eating edit line flicker mode sometimes.  And / or vi mode can crash on exit (stack smash).
 //          This might be fixed now.
