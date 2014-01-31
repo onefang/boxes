@@ -18,7 +18,8 @@ struct key
   char *name;
 };
 
-// This table includes some variations I have found on some terminals, and the MC "Esc digit" versions.
+// This table includes some variations I have found on some terminals,
+// and the MC "Esc digit" versions.
 // http://rtfm.etla.org/xterm/ctlseq.html has a useful guide.
 // TODO - Don't think I got all the linux console variations.
 // TODO - Add more shift variations, plus Ctrl & Alt variations when needed.
@@ -26,13 +27,15 @@ struct key
 // TODO - Add other miscelany that does not use an escape sequence.
 
 // This is sorted by type, though there is some overlap.
-// Human typing speeds wont need binary searching speeds on this small table.
-// So simple wins out over speed, and sorting by terminal type wins the simple test.
+// Human typing speeds wont need fast searching speeds on this small table.
+// So simple wins out over speed, and sorting by terminal type wins
+// the simple test.
 static struct key keys[] =
 {
   // Control characters.
-//  {"\x00",		"^@"},		// NUL Commented out coz it's the C string terminator, and may confuse things.
-  {"\x01",		"^A"},		// SOH Apparently sometimes sent as Home
+  //  Commented out coz it's the C string terminator, and may confuse things.
+  //{"\x00",		"^@"},		// NUL
+  {"\x01",		"^A"},		// SOH Apparently sometimes sent as Home.
   {"\x02",		"^B"},		// STX
   {"\x03",		"^C"},		// ETX SIGINT  Emacs and vi.
   {"\x04",		"^D"},		// EOT EOF     Emacs, joe, and nano.
@@ -40,17 +43,17 @@ static struct key keys[] =
   {"\x06",		"^F"},		// ACK
   {"\x07",		"^G"},		// BEL
   {"\x08",		"Del"},		// BS  Delete key, usually.
-  {"\x09",		"Tab"},		// HT  Tab key.
-  {"\x0A",		"Return"},	// LF  Return key.  Roxterm at least is translating both Ctrl-J and Ctrl-M into this.
+  {"\x09",		"Tab"},		// HT
+  {"\x0A",		"Return"},	// LF  Roxterm translates Ctrl-M to this.
   {"\x0B",		"^K"},		// VT
   {"\x0C",		"^L"},		// FF
   {"\x0D",		"^M"},		// CR  Other Return key, usually.
   {"\x0E",		"^N"},		// SO
   {"\x0F",		"^O"},		// SI  DISCARD
   {"\x10",		"^P"},		// DLE
-  {"\x11",		"^Q"},		// DC1 SIGCONT  Vi, and made up commands in MC, which seem to work anyway.
+  {"\x11",		"^Q"},		// DC1 SIGCONT  Vi.
   {"\x12",		"^R"},		// DC2
-  {"\x13",		"^S"},		// DC3 SIGSTOP can't be caught.  Emacs and vi, so much for "can't be caught".
+  {"\x13",		"^S"},		// DC3 SIGSTOP can't be caught.  Emacs and vi.
   {"\x14",		"^T"},		// DC4 SIGINFO STATUS
   {"\x15",		"^U"},		// NAK KILL character
   {"\x16",		"^V"},		// SYN LNEXT
@@ -58,17 +61,21 @@ static struct key keys[] =
   {"\x18",		"^X"},		// CAN KILL character
   {"\x19",		"^Y"},		// EM  DSUSP SIGTSTP
   {"\x1A",		"^Z"},		// SUB SIGTSTP
-//  {"\x1B",		"^["},		// ESC Esc key.  Commented out coz it's the ANSI start byte in the below multibyte keys.  Handled in the code with a timeout.
-  {"\x1C",		"^\\"},		// FS SIGQUIT  Some say ^D is SIGQUIT, but my tests say it's this.
+  // Commented out coz it's the ANSI start byte in the below multibyte keys.
+  // Handled in the code with a timeout.
+  //{"\x1B",		"^["},		// ESC Esc key.
+  {"\x1C",		"^\\"},		// FS SIGQUIT
   {"\x1D",		"^]"},		// GS
   {"\x1E",		"^^"},		// RS
   {"\x1F",		"^_"},		// US
   {"\x7F",		"BS"},		// Backspace key, usually.  Ctrl-? perhaps?
-//  {"\x9B",		"CSI"},		// CSI The eight bit encoding of "Esc [".  Commented out for the same reason Esc is.
+  // Commented out for the same reason Esc is.
+  //{"\x9B",		"CSI"},		// CSI The eight bit encoding of "Esc [".
 
   // "Usual" xterm CSI sequences, with ";1" omitted for no modifiers.
-  // Even though we have a proper CSI parser, these should still be in this table.
-  // Coz we would need a table anyway in the CSI parser, so might as well keep them with the others.
+  // Even though we have a proper CSI parser,
+  // these should still be in this table.  Coz we would need a table anyway
+  // in the CSI parser, so might as well keep them with the others.
   // Also, less code, no need to have a separate scanner for that other table.
   {"\x9B\x31~",		"Home"},	// Duplicate, think I've seen this somewhere.
   {"\x9B\x32~",		"Ins"},
@@ -113,7 +120,8 @@ static struct key keys[] =
   {"\x9B\x32\x33;2~",	"Shift F11"},
   {"\x9B\x32\x34;2~",	"Shift F12"},
 
-  // "Normal" Some terminals are special, and it seems they only have four function keys.
+  // "Normal" Some terminals are special, and it seems they only have
+  //  four function keys.
   {"\x9B\x41",		"Up"},
   {"\x9B\x42",		"Down"},
   {"\x9B\x43",		"Right"},
@@ -161,9 +169,12 @@ static struct key keys[] =
   {"\x1BO1;2S",		"Shift F4"},
 
   // MC "Esc digit" specials.
-  // NOTE - The MC Esc variations might not be such a good idea, other programs want the Esc key for other things.
-  //          Notably seems that "Esc somekey" is used in place of "Alt somekey" AKA "Meta somekey" coz apparently some OSes swallow those.
-  //            Conversely, some terminals send "Esc somekey" when you do "Alt somekey".
+  // NOTE - The MC Esc variations might not be such a good idea, other programs
+  //        want the Esc key for other things.
+  //          Notably seems that "Esc somekey" is used in place of "Alt somekey"
+  //          AKA "Meta somekey" coz apparently some OSes swallow those.
+  //            Conversely, some terminals send "Esc somekey" when you do
+  //            "Alt somekey".
   //          MC Esc variants might be used on Macs for other things?
   {"\x1B\x31",		"F1"},
   {"\x1B\x32",		"F2"},
@@ -186,8 +197,11 @@ static void handleSIGWINCH(int signalNumber)
 }
 
 // TODO - Unhandled complications -
-//   Less and more have the "ZZ" command, but nothing else seems to have multi ordinary character commands.
-void handle_keys(long extra, int (*handle_sequence)(long extra, char *sequence), void (*handle_CSI)(long extra, char *command, int *params, int count))
+//   Less and more have the "ZZ" command, but nothing else seems to have
+//   multi ordinary character commands.
+void handle_keys(long extra,
+  int (*handle_sequence)(long extra, char *sequence),
+  void (*handle_CSI)(long extra, char *command, int *params, int count))
 {
   fd_set selectFds;
   struct timespec timeOut;
@@ -201,13 +215,16 @@ void handle_keys(long extra, int (*handle_sequence)(long extra, char *sequence),
 
   // Terminals send the SIGWINCH signal when they resize.
   memset(&sigAction, 0, sizeof(sigAction));
-  sigAction.sa_flags = SA_RESTART;// Useless if we are using poll.
-  if (sigaction(SIGWINCH, &sigAction, &oldSigAction))  perror_exit("can't set signal handler SIGWINCH");
   sigAction.sa_handler = handleSIGWINCH;
+  sigAction.sa_flags = SA_RESTART;  // Useless if we are using poll.
+  if (sigaction(SIGWINCH, &sigAction, &oldSigAction))
+    perror_exit("can't set signal handler for SIGWINCH");
   sigemptyset(&signalMask);
   sigaddset(&signalMask, SIGWINCH);
 
-  // TODO - OS buffered keys might be a problem, but we can't do the usual timestamp filter for now.
+  // TODO - OS buffered keys might be a problem, but we can't do the
+  // usual timestamp filter for now.
+
   stillRunning = 1;
   while (stillRunning)
   {
@@ -218,20 +235,26 @@ void handle_keys(long extra, int (*handle_sequence)(long extra, char *sequence),
     FD_SET(0, &selectFds);
     timeOut.tv_sec = 0;  timeOut.tv_nsec = 100000000; // One tenth of a second.
 
-// TODO - A bit unstable at the moment, something makes it go into a horrid CPU eating edit line flicker mode sometimes.  And / or vi mode can crash on exit (stack smash).
+// TODO - A bit unstable at the moment, something makes it go into
+//        a horrid CPU eating edit line flicker mode sometimes.  And / or vi mode
+//        can crash on exit (stack smash).
 //          This might be fixed now.
 
-    // We got a "terminal size changed" signal, ask the terminal how big it is now.
+    // We got a "terminal size changed" signal, ask the terminal
+    // how big it is now.
     if (sigWinch)
     {
-      // Send - save cursor position, down 999, right 999, request cursor position, restore cursor position.
+      // Send - save cursor position, down 999, right 999,
+      // request cursor position, restore cursor position.
       fputs("\x1B[s\x1B[999C\x1B[999B\x1B[6n\x1B[u", stdout);
       fflush(stdout);
       sigWinch = 0;
     }
 
-    // TODO - Should only ask for a time out after we get an Escape, or the user requested time ticks.
-    // I wanted to use poll, but that would mean using ppoll, which is Linux only, and involves defining swear words to get it.
+    // TODO - Should only ask for a time out after we get an Escape, or
+    //        the user requested time ticks.
+    // I wanted to use poll, but that would mean using ppoll, which is
+    // Linux only, and involves defining swear words to get it.
     p = pselect(0 + 1, &selectFds, NULL, NULL, &timeOut, &signalMask);
     if (0 > p)
     {
@@ -239,21 +262,26 @@ void handle_keys(long extra, int (*handle_sequence)(long extra, char *sequence),
         continue;
       perror_exit("poll");
     }
-    else if (0 == p)          // A timeout, trigger a time event.
+    else if (0 == p)  // A timeout, trigger a time event.
     {
       if ((0 == buffer[1]) && ('\x1B' == buffer[0]))
       {
-        // After a short delay to check, this is a real Escape key, not part of an escape sequence, so deal with it.
-        // TODO - so far the only uses of this have the escape at the start, but maybe a strcat is needed instead later?
+        // After a short delay to check, this is a real Escape key,
+        // not part of an escape sequence, so deal with it.
+        // TODO - So far the only uses of this have the escape at the start,
+        //        but maybe a strcat is needed instead later?
         strcpy(sequence, "^[");
         buffer[0] = buffIndex = 0;
       }
-      // TODO - Call some sort of timer tick callback.  This wont be a precise timed event, but don't think we need one.
+      // TODO - Call some sort of timer tick callback.  This wont be
+      //        a precise timed event, but don't think we need one.
     }
     else if ((0 < p) && FD_ISSET(0, &selectFds))
     {
-      // I am assuming that we get the input atomically, each multibyte key fits neatly into one read.
-      // If that's not true (which is entirely likely), then we have to get complicated with circular buffers and stuff, or just one byte at a time.
+      // I am assuming that we get the input atomically, each multibyte key
+      // fits neatly into one read.
+      // If that's not true (which is entirely likely), then we have to get
+      // complicated with circular buffers and stuff, or just one byte at a time.
       j = read(0, &buffer[buffIndex], sizeof(buffer) - (buffIndex + 1));
       if (j < 0)      // An error happened.
       {
@@ -301,9 +329,9 @@ void handle_keys(long extra, int (*handle_sequence)(long extra, char *sequence),
     }
 
     // Check for known key sequences.
-    // For a real timeout checked Esc, buffer is now empty, so this for loop wont find it anyway.
-    // While it's true we could avoid it by checking, the user already had to wait for a time out, and this loop wont take THAT long.
-    for (j = 0; keys[j].code; j++)    // Search for multibyte keys and control keys.
+    // For a real timeout checked Esc, buffer is now empty, so this for loop
+    // wont find it anyway.  While it's true we could avoid it by checking,
+    // the user already had to wait for a time out, and this loop wont take THAT long.
     for (j = 0; j < (sizeof(keys) / sizeof(*keys)); j++)
     {
       if (strcmp(keys[j].code, buffer) == 0)
@@ -343,7 +371,8 @@ void handle_keys(long extra, int (*handle_sequence)(long extra, char *sequence),
 
       if ('M' == buffer[1])
       {
-        // TODO - We have a mouse report, which is CSI M ..., where the rest is binary encoded, more or less.  Not fitting into the CSI format.
+        // TODO - We have a mouse report, which is CSI M ..., where the rest is
+        // binary encoded, more or less.  Not fitting into the CSI format.
       }
       else
       {
@@ -379,10 +408,12 @@ void handle_keys(long extra, int (*handle_sequence)(long extra, char *sequence),
             // Only stomp on the ; if it's really the ;.
             if (t)
               buffer[j] = 0;
-            // Empty parameters are default parameters, so only deal with non defaults.
+            // Empty parameters are default parameters, so only deal with
+            // non defaults.
             if (';' != buffer[csIndex] || (!t))
             {
-              // TODO - Might be ":" in the number somewhere, but we are not expecting any in anything we do.
+              // TODO - Might be ":" in the number somewhere, but we are not
+              // expecting any in anything we do.
               csParams[p] = atoi(&buffer[csIndex]);
             }
             p++;
@@ -399,7 +430,8 @@ void handle_keys(long extra, int (*handle_sequence)(long extra, char *sequence),
       }
 
       csi = 0;
-      // Wether or not it's a CSI we understand, it's been handled either here or in the key sequence scanning above.
+      // Wether or not it's a CSI we understand, it's been handled either here
+      // or in the key sequence scanning above.
       buffer[0] = buffIndex = 0;
     }
 

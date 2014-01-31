@@ -2,7 +2,7 @@
  *
  * Copyright 2014 David Seikel <won_fang@yahoo.com.au>
  *
- * Not a real shell, so doesn't follow any standards, 
+ * Not a real shell, so doesn't follow any standards,
  * coz it wont implement them anyway.
 
 USE_DUMBSH(NEWTOY(dumbsh, "", TOYFLAG_USR|TOYFLAG_BIN))
@@ -48,7 +48,8 @@ static void updateLine()
     fflush(stdout);
     TT.y = TT.h;
   }
-  printf("\x1B[%d;0H%-*s\x1B[%d;%dH", TT.y + 1, TT.w, toybuf, TT.y + 1, TT.x + 1);
+  printf("\x1B[%d;0H%-*s\x1B[%d;%dH",
+    TT.y + 1, TT.w, toybuf, TT.y + 1, TT.x + 1);
   fflush(stdout);
 }
 
@@ -58,11 +59,14 @@ static void handleCSI(long extra, char *command, int *params, int count)
   // Is it a cursor location report?
   if (strcmp("R", command) == 0)
   {
-    // Parameters are cursor line and column.  Note this may be sent at other times, not just during terminal resize.
+    // Parameters are cursor line and column.
+    // NOTE - This may be sent at other times, not just during terminal resize.
+    //        We are assuming here that it's a resize.
     // The defaults are 1, which get ignored by the heuristic below.
     int r = params[0], c = params[1];
 
-    // Check it's not an F3 key variation, coz some of them use the same CSI function code.
+    // Check it's not an F3 key variation, coz some of them use 
+    // the same CSI function command.
     // This is a heuristic, we are checking against an unusable terminal size.
     if ((2 == count) && (8 < r) && (8 < c))
     {
@@ -96,8 +100,8 @@ static void backSpaceChar()
   }
 }
 
-// This is where we would actually deal with what ever command the user had typed in.
-// For now we just move on.
+// This is where we would actually deal with 
+// what ever command the user had typed in.
 // For now we just move on to the next line.
 // TODO - We would want to redirect I/O, capture some keys (^C),
 //        but pass the rest on.
