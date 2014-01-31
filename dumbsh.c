@@ -35,6 +35,7 @@ GLOBALS(
 
 #define TT this.dumbsh
 
+// Sanity check cursor location and update the current line.
 static void updateLine()
 {
   if (0 > TT.x)  TT.x = 0;
@@ -70,6 +71,10 @@ static void handleCSI(long extra, char *command, int *params, int count)
       updateLine();
     }
   }
+  // NOTE - The CSI differs from the sequence callback
+  // in not having to return anything.  CSI sequences include a
+  // definite terminating byte, so no need for this callback
+  // to tell handle_keys to keep accumulating.
 }
 
 // The various commands.
@@ -93,6 +98,14 @@ static void backSpaceChar()
 
 // This is where we would actually deal with what ever command the user had typed in.
 // For now we just move on.
+// For now we just move on to the next line.
+// TODO - We would want to redirect I/O, capture some keys (^C),
+//        but pass the rest on.
+//        Dunno yet how to deal with that.
+//        We still want handle_keys to be doing it's thing,
+//        so maybe handing it another fd, and a callback.
+//        A function to add and remove fd and callback pairs for
+//        handle_keys to check?
 static void doCommand()
 {
   toybuf[0] = 0;
@@ -171,6 +184,7 @@ static struct keyCommand simpleEmacsKeys[] =
   {"^P",	prevHistory}
 };
 
+// Callback for incoming key sequences from the user.
 static int handleKeySequence(long extra, char *sequence)
 {
   int j;
@@ -186,6 +200,9 @@ static int handleKeySequence(long extra, char *sequence)
   }
 
   // See if it's ordinary keys.
+  // NOTE - with vi style ordinary keys can be commands,
+  // but they would be found by the command check above first.
+  // So here we just check the first character, and insert it all.
   if (isprint(sequence[0]))
   {
     if (TT.x < sizeof(toybuf))
@@ -202,6 +219,8 @@ static int handleKeySequence(long extra, char *sequence)
     return 1;
   }
 
+  // Return 0 if we didn't handle it, handle_keys will just keep on
+  // accumulating sequences and trying again.
   return 0;
 }
 
@@ -245,9 +264,11 @@ void dumbsh_main(void)
   TT.h = 24;
   terminal_size(&TT.w, &TT.h);
 
+  // Let's rock!
   updateLine();
   handle_keys(0, handleKeySequence, handleCSI);
 
+  // Clean up.
   tcsetattr(0, TCSANOW, &oldTermIo);
   puts("");
   fflush(stdout);
