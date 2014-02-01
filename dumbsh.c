@@ -117,7 +117,7 @@ static void doCommand()
 
 static void endOfLine()
 {
-  TT.x = strlen(toybuf) - 1;
+  TT.x = strlen(toybuf);
   updateLine();
 }
 
