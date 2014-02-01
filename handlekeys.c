@@ -287,20 +287,15 @@ void handle_keys(long extra,
     if (pendingEsc)  continue;
 
     // Check if it's a CSI before we check for the known key sequences.
-    if ('\x9B' == buffer[0])
-      csi = 1;
-    if (('\x1B' == buffer[0]) && ('[' == buffer[1]))
-      csi = 2;
-    if (('\xC2' == buffer[0]) && ('\x9B' == buffer[1]))
-      csi = 2;
-    if (2 == csi)
+    if ((('\x1B' == buffer[0]) && ('[' == buffer[1]))
+      || (('\xC2' == buffer[0]) && ('\x9B' == buffer[1])))
     {
       buffer[0] = '\x9B';
       for (j = 1; buffer[j]; j++)
         buffer[j] = buffer[j + 1];
       buffIndex--;
-      csi = 1;
     }
+    csi = ('\x9B' == buffer[0]);
 
     // Check for known key sequences.
     // For a real timeout checked Esc, buffer is now empty, so this for loop
@@ -347,6 +342,7 @@ void handle_keys(long extra,
       {
         // TODO - We have a mouse report, which is CSI M ..., where the rest is
         // binary encoded, more or less.  Not fitting into the CSI format.
+        // To make things worse, can't tell how long this will be.
       }
       else
       {
@@ -397,16 +393,17 @@ void handle_keys(long extra,
         }
         while (t);
 
-        // Get the final command sequence, and pass it to the callback.
+        // Check if we got the final byte, and send it to the callback.
         strcat(csFinal, &buffer[csIndex]);
-        if (handle_CSI)
-          handle_CSI(extra, csFinal, csParams, p);
+        t = csFinal + strlen(csFinal) - 1;
+        if (('\x40' <= (*t)) && ((*t) <= '\x7e'))
+        {
+          if (handle_CSI)
+            handle_CSI(extra, csFinal, csParams, p);
+          buffer[0] = buffIndex = 0;
+          sequence[0] = 0;
+        }
       }
-
-      csi = 0;
-      // Wether or not it's a CSI we understand, it's been handled either here
-      // or in the key sequence scanning above.
-      buffer[0] = buffIndex = 0;
     }
 
     // Pass the result to the callback.
