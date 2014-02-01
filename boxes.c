@@ -1628,8 +1628,11 @@ static void termSize(long extra, int *params, int count)
   // TODO - Double check what the maximum F3 variations can be.
   if ((2 == count) && (8 < r) && (8 < c))
   {
-    // FIXME - The change is not being propogated to everything properly.
-    sizeViewToBox(rootBox, rootBox->X, rootBox->Y, c, r - 1);
+    commandLine->Y = r;
+    commandLine->W = c;
+    rootBox->W = c;
+    rootBox->H = r - 1;
+    sizeViewToBox(rootBox, -1, -1, -1, -1);
     calcBoxes(rootBox);
     drawBoxes(rootBox);
 
