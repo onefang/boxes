@@ -258,12 +258,7 @@ void handle_keys(long extra,
       // If that's not true (which is entirely likely), then we have to get
       // complicated with circular buffers and stuff, or just one byte at a time.
       j = read(0, &buffer[buffIndex], sizeof(buffer) - (buffIndex + 1));
-      if (j < 0)      // An error happened.
-      {
-        // For now, just ignore errors.
-        fprintf(stderr, "input error on %d\n", p);
-        fflush(stderr);
-      }
+      if (j < 0)  perror_exit("input error");
       else if (j == 0)    // End of file.
       {
         stillRunning = 0;
