@@ -177,7 +177,7 @@ static void handleSIGWINCH(int signalNumber)
 }
 
 void handle_keys(long extra,
-  int (*handle_sequence)(long extra, char *sequence),
+  int (*handle_sequence)(long extra, char *sequence, int isTranslated),
   void (*handle_CSI)(long extra, char *command, int *params, int count))
 {
   fd_set selectFds;
@@ -211,11 +211,6 @@ void handle_keys(long extra,
     FD_ZERO(&selectFds);
     FD_SET(0, &selectFds);
     timeOut.tv_sec = 0;  timeOut.tv_nsec = 100000000; // One tenth of a second.
-
-// TODO - A bit unstable at the moment, something makes it go into
-//        a horrid CPU eating edit line flicker mode sometimes.  And / or vi mode
-//        can crash on exit (stack smash).
-//          This might be fixed now.
 
     // We got a "terminal size changed" signal, ask the terminal
     // how big it is now.
@@ -253,10 +248,6 @@ void handle_keys(long extra,
     }
     else if ((0 < p) && FD_ISSET(0, &selectFds))
     {
-      // I am assuming that we get the input atomically, each multibyte key
-      // fits neatly into one read.
-      // If that's not true (which is entirely likely), then we have to get
-      // complicated with circular buffers and stuff, or just one byte at a time.
       j = read(0, &buffer[buffIndex], sizeof(buffer) - (buffIndex + 1));
       if (j < 0)  perror_exit("input error");
       else if (j == 0)    // End of file.
@@ -412,10 +403,10 @@ void handle_keys(long extra,
       char b[strlen(sequence) + strlen(buffer) + 1];
 
       sprintf(b, "%s%s", sequence, buffer);
-      if (handle_sequence(extra, b))
+      if (handle_sequence(extra, b, (0 != sequence[0])))
       {
-        sequence[0] = 0;
         buffer[0] = buffIndex = 0;
+        sequence[0] = 0;
       }
     }
   }

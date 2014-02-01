@@ -1662,12 +1662,12 @@ static void handleCSI(long extra, char *command, int *params, int count)
   }
 }
 
-
-static int handleKeySequence(long extra, char *sequence)
+// Callback for incoming key sequences from the user.
+static int handleKeySequence(long extra, char *sequence, int isTranslated)
 {
   struct _view *view = (struct _view *) extra;		// Though we pretty much stomp on this straight away.
   struct keyCommand *commands = currentBox->view->content->context->modes[currentBox->view->mode].keys;
-  int j;
+  int j, l = strlen(sequence);
 
   // Coz things might change out from under us, find the current view.
   if (commandMode)	view = commandLine;
@@ -1676,14 +1676,23 @@ static int handleKeySequence(long extra, char *sequence)
   // Search for a key sequence bound to a command.
   for (j = 0; commands[j].key; j++)
   {
-    if (strcmp(commands[j].key, sequence) == 0)
+    if (strncmp(commands[j].key, sequence, l) == 0)
     {
-      doCommand(view, commands[j].command);
-      return 1;
+      // If it's a partial match, keep accumulating them.
+      if (strlen(commands[j].key) != l)
+        return 0;
+      else
+      {
+        doCommand(view, commands[j].command);
+        return 1;
+      }
     }
   }
 
-  if ((0 == sequence[1]) && isprint(sequence[0]))	// See if it's an ordinary key.
+  // See if it's ordinary keys.
+  // NOTE - with vi style ordinary keys can be commands,
+  // but they would be found by the command check above first.
+  if (!isTranslated)
   {
     // TODO - Should check for tabs to, and insert them.
     //        Though better off having a function for that?
@@ -1691,10 +1700,10 @@ static int handleKeySequence(long extra, char *sequence)
     view->oW = formatLine(view, view->line->line, &(view->output));
     moveCursorRelative(view, strlen(sequence), 0, 0, 0);
     updateLine(view);
-    return 1;
   }
 
-  return 0;
+  // Tell handle_keys to drop it, coz we dealt with it, or it's not one of ours.
+  return 1;
 }
 
 

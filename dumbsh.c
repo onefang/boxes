@@ -188,25 +188,30 @@ static struct keyCommand simpleEmacsKeys[] =
 };
 
 // Callback for incoming key sequences from the user.
-static int handleKeySequence(long extra, char *sequence)
+static int handleKeySequence(long extra, char *sequence, int isTranslated)
 {
-  int j;
+  int j, l = strlen(sequence);
 
   // Search for a key sequence bound to a command.
   for (j = 0; j < (sizeof(simpleEmacsKeys) / sizeof(*simpleEmacsKeys)); j++)
   {
-    if (strcmp(simpleEmacsKeys[j].key, sequence) == 0)
+    if (strncmp(simpleEmacsKeys[j].key, sequence, l) == 0)
     {
-      if (simpleEmacsKeys[j].handler)  simpleEmacsKeys[j].handler();
-      return 1;
+      // If it's a partial match, keep accumulating them.
+      if (strlen(simpleEmacsKeys[j].key) != l)
+        return 0;
+      else
+      {
+        if (simpleEmacsKeys[j].handler)  simpleEmacsKeys[j].handler();
+        return 1;
+      }
     }
   }
 
   // See if it's ordinary keys.
   // NOTE - with vi style ordinary keys can be commands,
   // but they would be found by the command check above first.
-  // So here we just check the first character, and insert it all.
-  if (isprint(sequence[0]))
+  if (!isTranslated)
   {
     if (TT.x < sizeof(toybuf))
     {
@@ -219,12 +224,10 @@ static int handleKeySequence(long extra, char *sequence)
       TT.x += l;
       updateLine();
     }
-    return 1;
   }
 
-  // Return 0 if we didn't handle it, handle_keys will just keep on
-  // accumulating sequences and trying again.
-  return 0;
+  // Tell handle_keys to drop it, coz we dealt with it, or it's not one of ours.
+  return 1;
 }
 
 void dumbsh_main(void)

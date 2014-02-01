@@ -5,7 +5,7 @@
 
 /* An input loop that handles keystrokes and terminal CSI commands.
  *
- * Reads stdin, trying to convert raw keystrokes into something more readable.
+ * Reads stdin, trying to translate raw keystrokes into something more readable.
  * See the keys[] array at the top of handlekeys.c for what byte sequences get
  * translated into what key names.  See dumbsh.c for an example of usage.
  * A 0.1 second delay is used to detect the Esc key being pressed, and not Esc
@@ -27,9 +27,15 @@
  *  handle_CSI      - a callback to handle terminal CSI commands.
  *
  * handle_sequence is called when a complete keystroke sequence has been
- * accumulated.  It should return 1 if the sequence has been dealt with,
- * otherwise it should return 0, then handle_keys will keep adding more
- * complete keystroke sequences on the end, and try again later.
+ * accumulated.  The sequence argument holds the accumulated keystrokes.
+ * The translated argument flags if any have been translated, otherwise you
+ * can assume it's all ordinary characters.
+ *
+ * handle_keys should return 1 if the sequence has been dealt with, or ignored.
+ * It should return 0, if handle_keys should keep adding more
+ * translated keystroke sequences on the end, and try again later.
+ * 0 should really only be used if it's a partial match, and we need more
+ * keys in the sequence to make a full match.
  *
  * handle_CSI is called when a complete terminal CSI command has been
  * detected.  The command argument is the full CSI command code, including
@@ -45,7 +51,7 @@
  * get accumulated until fully recognised by the user code.
  */
 void handle_keys(long extra, 
-  int (*handle_sequence)(long extra, char *sequence),
+  int (*handle_sequence)(long extra, char *sequence, int isTranslated),
   void (*handle_CSI)(long extra, char *command, int *params, int count));
 
 
