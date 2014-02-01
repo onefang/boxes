@@ -39,15 +39,10 @@ GLOBALS(
 static void updateLine()
 {
   if (0 > TT.x)  TT.x = 0;
-  if (strlen(toybuf) <= TT.x)  TT.x = strlen(toybuf);
-  if (TT.w < TT.x)  TT.x = TT.w;
   if (0 > TT.y)  TT.y = 0;
-  if (TT.h < TT.y)
-  {
-    printf("\x1B[%d;0H\n", TT.y + 1);
-    fflush(stdout);
-    TT.y = TT.h;
-  }
+  if (TT.w < TT.x)  TT.x = TT.w;
+  if (TT.h < TT.y)  TT.y = TT.h;
+  if (strlen(toybuf) < TT.x)  TT.x = strlen(toybuf);
   printf("\x1B[%d;0H%-*s\x1B[%d;%dH",
     TT.y + 1, TT.w, toybuf, TT.y + 1, TT.x + 1);
   fflush(stdout);
@@ -115,6 +110,8 @@ static void doCommand()
   toybuf[0] = 0;
   TT.x = 0;
   TT.y++;
+  printf("\n");
+  fflush(stdout);
   updateLine();
 }
 
