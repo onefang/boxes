@@ -2467,8 +2467,8 @@ void boxes_main(void)
 //  fputs("\x1B[1;2'z\x1B[1;3'{", stdout);
   // Enable mouse (VT200 normal tracking mode).  Has a limit of 256 - 32 rows and columns.  An xterm exclusive I think, but works in roxterm at least.  No wheel reports.
   // Responds with "\x1B[Mbxy" where x and y are the mouse coords, and b is bit encoded buttons and modifiers - 0=MB1 pressed, 1=MB2 pressed, 2=MB3 pressed, 3=release, 4=Shift, 8=Meta, 16=Control
-  fputs("\x1B[?1000h", stdout);
-  fflush(stdout);
+//  fputs("\x1B[?1000h", stdout);
+//  fflush(stdout);
 
   calcBoxes(currentBox);
   drawBoxes(currentBox);
