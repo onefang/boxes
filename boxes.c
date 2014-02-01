@@ -1819,7 +1819,6 @@ struct keyCommand simpleEmacsKeys[] =
   {"^F",	"forward-char"},
   {"Escx",	"execute-extended-command"},	// M-x
   {"^X2",	"split-window-vertically"},
-  {"^X3",	"split-window-horizontally"},	// TODO - Just making this up for now.
   {"^XP",	"other-window"},
   {"^X0",	"delete-window"},
   {"Up",	"previous-line"},
@@ -1839,6 +1838,8 @@ struct keyCommand simpleEmacsCommandKeys[] =
   {"^A",	"beginning-of-line"},
   {"Left",	"backward-char"},
   {"^B",	"backward-char"},
+  {"Right",	"forward-char"},
+  {"^F",	"forward-char"},
   {"Up",	"previous-line"},
   {"^P",	"previous-line"},
   {"Enter",	"accept-line"},
@@ -2070,7 +2071,7 @@ struct keyCommand simpleMceditKeys[] =
   {"Enter",	"splitLine"},
   {"Return",	"splitLine"},
   {"Right",	"rightChar"},
-{"Shift F2",	"switchMode"},	// MC doesn't have a command mode.
+  {"Shift F2",	"switchMode"},	// MC doesn't have a command mode.
   {"Esc:",	"switchMode"},	// Sorta vi like, and coz tmux is screwing with the shift function keys somehow.
   {"Esc|",	"splitV"},	// MC doesn't have a split window concept, so make these up to match tmux more or less.
   {"Esc-",	"splitH"},
@@ -2134,7 +2135,7 @@ struct keyCommand simpleNanoKeys[] =
   {"^E",	"end"},
   {"End",	"end"},
   {"^X",	"exit"},
-  {"F2",	"quit"},
+  {"F2",	"exit"},
   {"^O",	"writeout"},
   {"F3",	"writeout"},
   {"^A",	"home"},
