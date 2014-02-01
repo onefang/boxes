@@ -148,7 +148,7 @@ static struct key keys[] =
   {"\x1BOq",		"End"},
   {"\x1BOw",		"Home"},
   {"\x1BOP",		"F1"},
-  {"\x1BOO",		"F2"},
+  {"\x1BOQ",		"F2"},
   {"\x1BOR",		"F3"},
   {"\x1BOS",		"F4"},
   {"\x1BOT",		"F5"},
