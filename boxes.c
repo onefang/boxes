@@ -1737,9 +1737,10 @@ struct keyCommand simpleCommandKeys[] =
   {"F10",	"quit"},
   {"Home",	"startOfLine"},
   {"Left",	"leftChar"},
+  {"Enter",	"executeLine"},
   {"Return",	"executeLine"},
   {"Right",	"rightChar"},
-  {"^[",	"switchMode"},
+  {"Esc",	"switchMode"},
   {"Up",	"upLine"},
   {NULL, NULL}
 };
@@ -1782,6 +1783,7 @@ struct function simpleEmacsCommands[] =
 // The key to command mappings.
 struct keyCommand simpleEmacsKeys[] =
 {
+  {"BS",	"delete-backward-char"},
   {"Del",	"delete-backward-char"},
   {"^D",	"delete-char"},
   {"Down",	"next-line"},
@@ -1797,14 +1799,14 @@ struct keyCommand simpleEmacsKeys[] =
   {"PgDn",	"scroll-up"},
   {"^V",	"scroll-up"},
   {"PgUp",	"scroll-down"},
-  {"^[v",	"scroll-down"},			// M-v
+  {"Escv",	"scroll-down"},			// M-v
+  {"Enter",	"newline"},
   {"Return",	"newline"},
   {"Right",	"forward-char"},
   {"^F",	"forward-char"},
-  {"^[x",	"execute-extended-command"},	// M-x
+  {"Escx",	"execute-extended-command"},	// M-x
   {"^X2",	"split-window-vertically"},
   {"^X3",	"split-window-horizontally"},	// TODO - Just making this up for now.
-  {"^XP",	"other-window"},
   {"^XP",	"other-window"},
   {"^X0",	"delete-window"},
   {"Up",	"previous-line"},
@@ -1816,7 +1818,6 @@ struct keyCommand simpleEmacsCommandKeys[] =
 {
   {"Del",	"delete-backwards-char"},
   {"^D",	"delete-char"},
-  {"^D",	"delete-char"},
   {"Down",	"next-line"},
   {"^N",	"next-line"},
   {"End",	"end-of-line"},
@@ -1827,8 +1828,9 @@ struct keyCommand simpleEmacsCommandKeys[] =
   {"^B",	"backward-char"},
   {"Up",	"previous-line"},
   {"^P",	"previous-line"},
+  {"Enter",	"accept-line"},
   {"Return",	"accept-line"},
-  {"^[x",	"execute-extended-command"},
+  {"Escx",	"execute-extended-command"},
   {NULL, NULL}
 };
 
@@ -1901,11 +1903,12 @@ struct keyCommand simpleJoeKeys[] =
   {"^B",	"ltarw"},
   {"^V",	"pgdn"},	// Actually half a page.
   {"^U",	"pgup"},	// Actually half a page.
+  {"Enter",	"open"},
   {"Return",	"open"},
   {"Right",	"rtarw"},
   {"^F",	"rtarw"},
-  {"^[x",	"execmd"},
-  {"^[^X",	"execmd"},
+  {"Escx",	"execmd"},
+  {"Esc^X",	"execmd"},
   {"^Ko",	"splitw"},
   {"^K^O",	"splitw"},
   {"^Kn",	"nextw"},
@@ -1929,10 +1932,11 @@ struct keyCommand simpleJoeCommandKeys[] =
   {"^B",	"ltarw"},
   {"Right",	"rtarw"},
   {"^F",	"rtarw"},
-  {"^[x",	"execmd"},
-  {"^[^X",	"execmd"},
+  {"Escx",	"execmd"},
+  {"Esc^X",	"execmd"},
   {"Up",	"uparw"},
   {"^P",	"uparw"},
+  {"Enter",	"executeLine"},
   {"Return",	"executeLine"},
   {NULL, NULL}
 };
@@ -1959,19 +1963,17 @@ struct context simpleJoe =
 // No cursor movement, just scrolling.
 // TODO - Put content into read only mode.
 // TODO - actually implement read only mode where up and down one line do actual scrolling instead of cursor movement.
-// TODO - maybe I can support the ZZ command in one of two ways -
-//          Just have a Z command do the quit.
-//          Have the first Z go into a special mode, where anything other than a Z restores the original mode.
 
 struct keyCommand simpleLessKeys[] =
 {
   {"Down",	"downLine"},
   {"j",		"downLine"},
+  {"Enter",	"downLine"},
   {"Return",	"downLine"},
   {"End",	"endOfLine"},
   {"q",		"quit"},
   {":q",	"quit"},	// TODO - A vi ism, should do ex command stuff instead.
-  {"ZZ",	"quit"},	// The infrastructure here does not support this style of command.
+  {"ZZ",	"quit"},
   {"PgDn",	"downPage"},
   {"f",		"downPage"},
   {" ",		"downPage"},
@@ -2005,10 +2007,11 @@ struct context simpleLess =
 struct keyCommand simpleMoreKeys[] =
 {
   {"j",		"downLine"},
+  {"Enter",	"downLine"},
   {"Return",	"downLine"},
   {"q",		"quit"},
   {":q",	"quit"},	// See comments for "less".
-  {"ZZ",	"quit"},	// See comments for "less".
+  {"ZZ",	"quit"},
   {"f",		"downPage"},
   {" ",		"downPage"},
   {"^F",	"downPage"},
@@ -2044,21 +2047,22 @@ struct keyCommand simpleMceditKeys[] =
   {"Down",	"downLine"},
   {"End",	"endOfLine"},
   {"F10",	"quit"},
-  {"^[0",	"quit"},
+  {"Esc0",	"quit"},
   {"F2",	"save"},
-  {"^[2",	"save"},
+  {"Esc2",	"save"},
   {"Home",	"startOfLine"},
   {"Left",	"leftChar"},
   {"PgDn",	"downPage"},
   {"PgUp",	"upPage"},
+  {"Enter",	"splitLine"},
   {"Return",	"splitLine"},
   {"Right",	"rightChar"},
 {"Shift F2",	"switchMode"},	// MC doesn't have a command mode.
-  {"^[:",	"switchMode"},	// Sorta vi like, and coz tmux is screwing with the shift function keys somehow.
-  {"^[|",	"splitV"},	// MC doesn't have a split window concept, so make these up to match tmux more or less.
-  {"^[-",	"splitH"},
-  {"^[o",	"switchBoxes"},
-  {"^[x",	"deleteBox"},
+  {"Esc:",	"switchMode"},	// Sorta vi like, and coz tmux is screwing with the shift function keys somehow.
+  {"Esc|",	"splitV"},	// MC doesn't have a split window concept, so make these up to match tmux more or less.
+  {"Esc-",	"splitH"},
+  {"Esco",	"switchBoxes"},
+  {"Escx",	"deleteBox"},
   {"Up",	"upLine"},
   {NULL, NULL}
 };
@@ -2128,6 +2132,7 @@ struct keyCommand simpleNanoKeys[] =
   {"PgDn",	"downPage"},
   {"^Y",	"upPage"},	// ?
   {"PgUp",	"upPage"},
+  {"Enter",	"enter"},	// TODO - Not sure if this is correct.
   {"Return",	"enter"},	// TODO - Not sure if this is correct.
   {"^F",	"right"},
   {"Right",	"right"},
@@ -2264,6 +2269,7 @@ struct keyCommand simpleViNormalKeys[] =
   {"^F",	"downPage"},
   {"PgUp",	"upPage"},
   {"^B",	"upPage"},
+  {"Enter",	"startOfNextLine"},
   {"Return",	"startOfNextLine"},
   {"Right",	"rightChar"},
   {"l",		"rightChar"},
@@ -2289,7 +2295,7 @@ struct keyCommand simpleViInsertKeys[] =
   {"BS",	"backSpaceChar"},
   {"Del",	"deleteChar"},
   {"Return",	"splitLine"},
-  {"^[",	"visual"},
+  {"Esc",	"visual"},
   {"^C",	"visual"},
   {NULL, NULL}
 };
@@ -2302,9 +2308,10 @@ struct keyCommand simpleExKeys[] =
   {"End",	"endOfLine"},
   {"Home",	"startOfLine"},
   {"Left",	"leftChar"},
+  {"Enter",	"executeLine"},
   {"Return",	"executeLine"},
   {"Right",	"rightChar"},
-  {"^[",	"visual"},
+  {"Esc",	"visual"},
   {"Up",	"upLine"},
   {NULL, NULL}
 };

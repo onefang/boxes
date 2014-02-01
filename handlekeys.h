@@ -9,8 +9,7 @@
  * See the keys[] array at the top of handlekeys.c for what byte sequences get
  * translated into what key names.  See dumbsh.c for an example of usage.
  * A 0.1 second delay is used to detect the Esc key being pressed, and not Esc
- * being part of a raw keystroke.  As a bonus, Midnight Commander style
- * "Esc digit" sequences are translated to function keys.
+ * being part of a raw keystroke.
  *
  * handle_keys also tries to decode CSI commands that terminals can send.
  * Some keystrokes are CSI commands, but those are translated as key sequences

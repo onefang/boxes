@@ -18,8 +18,7 @@ struct key
   char *name;
 };
 
-// This table includes some variations I have found on some terminals,
-// and the MC "Esc digit" versions.
+// This table includes some variations I have found on some terminals.
 // http://rtfm.etla.org/xterm/ctlseq.html has a useful guide.
 // TODO - Don't think I got all the linux console variations.
 // TODO - Add more shift variations, plus Ctrl & Alt variations when needed.
@@ -44,10 +43,10 @@ static struct key keys[] =
   {"\x07",		"^G"},		// BEL
   {"\x08",		"Del"},		// BS  Delete key, usually.
   {"\x09",		"Tab"},		// HT
-  {"\x0A",		"Return"},	// LF  Roxterm translates Ctrl-M to this.
+  {"\x0A",		"Enter"},	// LF  Roxterm translates Ctrl-M to this.
   {"\x0B",		"^K"},		// VT
   {"\x0C",		"^L"},		// FF
-  {"\x0D",		"^M"},		// CR  Other Return key, usually.
+  {"\x0D",		"Return"},	// CR  Other Enter/Return key, usually.
   {"\x0E",		"^N"},		// SO
   {"\x0F",		"^O"},		// SI  DISCARD
   {"\x10",		"^P"},		// DLE
@@ -63,7 +62,7 @@ static struct key keys[] =
   {"\x1A",		"^Z"},		// SUB SIGTSTP
   // Commented out coz it's the ANSI start byte in the below multibyte keys.
   // Handled in the code with a timeout.
-  //{"\x1B",		"^["},		// ESC Esc key.
+  //{"\x1B",		"Esc"},		// ESC Esc key.
   {"\x1C",		"^\\"},		// FS SIGQUIT
   {"\x1D",		"^]"},		// GS
   {"\x1E",		"^^"},		// RS
@@ -167,25 +166,6 @@ static struct key keys[] =
   {"\x1BO1;2Q",		"Shift F2"},
   {"\x1BO1;2R",		"Shift F3"},
   {"\x1BO1;2S",		"Shift F4"},
-
-  // MC "Esc digit" specials.
-  // NOTE - The MC Esc variations might not be such a good idea, other programs
-  //        want the Esc key for other things.
-  //          Notably seems that "Esc somekey" is used in place of "Alt somekey"
-  //          AKA "Meta somekey" coz apparently some OSes swallow those.
-  //            Conversely, some terminals send "Esc somekey" when you do
-  //            "Alt somekey".
-  //          MC Esc variants might be used on Macs for other things?
-  {"\x1B\x31",		"F1"},
-  {"\x1B\x32",		"F2"},
-  {"\x1B\x33",		"F3"},
-  {"\x1B\x34",		"F4"},
-  {"\x1B\x35",		"F5"},
-  {"\x1B\x36",		"F6"},
-  {"\x1B\x37",		"F7"},
-  {"\x1B\x38",		"F8"},
-  {"\x1B\x39",		"F9"},
-  {"\x1B\x30",		"F10"}
 };
 
 static volatile sig_atomic_t sigWinch;
@@ -196,9 +176,6 @@ static void handleSIGWINCH(int signalNumber)
     sigWinch = 1;
 }
 
-// TODO - Unhandled complications -
-//   Less and more have the "ZZ" command, but nothing else seems to have
-//   multi ordinary character commands.
 void handle_keys(long extra,
   int (*handle_sequence)(long extra, char *sequence),
   void (*handle_CSI)(long extra, char *command, int *params, int count))
@@ -268,9 +245,7 @@ void handle_keys(long extra,
       {
         // After a short delay to check, this is a real Escape key,
         // not part of an escape sequence, so deal with it.
-        // TODO - So far the only uses of this have the escape at the start,
-        //        but maybe a strcat is needed instead later?
-        strcpy(sequence, "^[");
+        strcat(sequence, "Esc");
         buffer[0] = buffIndex = 0;
       }
       // TODO - Call some sort of timer tick callback.  This wont be
