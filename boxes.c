@@ -1648,6 +1648,7 @@ struct CSI CSIcommands[] =
   {"R", termSize}	// Parameters are cursor line and column.  Note this may be sent at other times, not just during terminal resize.
 };
 
+// Callback for incoming CSI commands from the terminal.
 static void handleCSI(long extra, char *command, int *params, int count)
 {
   int j;
