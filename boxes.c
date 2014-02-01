@@ -1878,7 +1878,7 @@ struct context simpleEmacs =
 struct function simpleJoeCommands[] =
 {
   {"backs",	"Back space last character.",		0, {backSpaceChar}},
-  {"abort",	"Delete a box.",			0, {deleteBox}},
+  {"abort",	"Delete a box.",			0, {deleteBox}},	// TODO - Should do quit if it's the last window.
   {"delch",	"Delete current character.",		0, {deleteChar}},
   {"dnarw",	"Move cursor down one line.",		0, {downLine}},
   {"pgdn",	"Move cursor down one page.",		0, {downPage}},
@@ -1908,7 +1908,7 @@ struct keyCommand simpleJoeKeys[] =
   {"Down",	"dnarw"},
   {"^N",	"dnarw"},
   {"^E",	"eol"},
-//  {"F10",	"killjoe"},	// "deleteBox" should do this if it's the last window.
+  {"^C",	"killjoe"},
   {"^Kd",	"save"},
   {"^K^D"	"save"},
   {"^A",	"bol"},
@@ -1926,8 +1926,8 @@ struct keyCommand simpleJoeKeys[] =
   {"^K^O",	"splitw"},
   {"^Kn",	"nextw"},
   {"^K^N",	"nextw"},
-  {"^Kx",	"abort"},	// Should ask if it should save if it's been modified.  A good generic thing to do anyway.
-  {"^K^X",	"abort"},
+  {"^Kx",	"killjoe"},	// TODO - Should ask if it should save if it's been modified.  A good generic thing to do anyway.
+  {"^K^X",	"abort"},	// TODO - These two both close a window, and quit if that was the last window.
   {"Up",	"uparw"},
   {"^P",	"uparw"},
   {NULL, NULL}
