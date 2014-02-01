@@ -185,7 +185,7 @@ void handle_keys(long extra,
   struct sigaction sigAction, oldSigAction;
   sigset_t signalMask;
   char buffer[20], sequence[20];
-  int buffIndex = 0;
+  int buffIndex = 0, pendingEsc = 0;
 
   buffer[0] = 0;
   sequence[0] = 0;
@@ -241,7 +241,7 @@ void handle_keys(long extra,
     }
     else if (0 == p)  // A timeout, trigger a time event.
     {
-      if ((0 == buffer[1]) && ('\x1B' == buffer[0]))
+      if (pendingEsc)
       {
         // After a short delay to check, this is a real Escape key,
         // not part of an escape sequence, so deal with it.
@@ -286,6 +286,10 @@ void handle_keys(long extra,
         buffer[buffIndex] = 0;
       }
     }
+
+    // Check for lone Esc first, wait a bit longer if it is
+    pendingEsc = ((0 == buffer[1]) && ('\x1B' == buffer[0]));
+    if (pendingEsc)  continue;
 
     // Check if it's a CSI before we check for the known key sequences.
     if ('\x9B' == buffer[0])
