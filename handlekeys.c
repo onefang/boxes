@@ -276,6 +276,8 @@ void handle_keys(long extra, int (*handle_event)(long extra, struct keyevent *ev
     if (pendingEsc)  continue;
 
     // Check if it's a CSI before we check for the known key sequences.
+    // C29B is the UTF8 encoding of CSI.
+    // In all cases we reduce CSI to 9B to keep the keys table shorter.
     if ((('\x1B' == buffer[0]) && ('[' == buffer[1]))
       || (('\xC2' == buffer[0]) && ('\x9B' == buffer[1])))
     {
@@ -305,25 +307,32 @@ void handle_keys(long extra, int (*handle_event)(long extra, struct keyevent *ev
     if (csi)
     {
       /* ECMA-048 section 5.2 defines this, and is unreadable.
-       * General CSI format - CSI [private] n1 ; n2 [extra] final
-       *   private  0x3c to 0x3f  "<=>?" If first byte is one of these,
-       *                                 this is a private command, if it's
-       *                                 one of the other n1 ones,
-       *                                 it's not private.
-       *   n1       0x30 to 0x3f  "01234567890:;<=>?"
-       *                                 ASCII digits forming a "number"
-       *            0x3a          ":"    Used for floats, not expecting any.
-       *                                 Could also be used as some other sort of
-       *                                 inter digit separator.
-       *            0x3b [;]             Separates the parameters.
-       *   extra    0x20 to 0x2f  [ !"#$%&'()*+,-./]
-       *                                 Can be multiple, likely isn't.
-       *   final    0x40 to 0x7e  "@A .. Z[\]^_`a .. z{|}~"
-       *                                  It's private if 0x70 to 0x7e "p .. z{|}~"
-       *                                  Though the "private" ~ is used for key codes.
-       *                                  We also have SS3 "\x1BO" for other keys,
-       *                                  but that's not a CSI.
-       * C0 controls, DEL (0x7f), or high characters are undefined.
+       * So I'll include some notes here that tries to simplify that.
+       *
+       * The CSI format is - CSI [private] n1 ; n2 [extra] final
+       * Each of those parts, except for the initial CSI bytes, is an ordinary
+       * ASCII character.
+       *
+       * The optional [private] part is one of these characters "<=>?".
+       * If the first byte is one of these, then this is a private command, if
+       * it's one of the other n1 ones, it's not private.
+       *
+       * Next is a semi colon separated list of parameters (n1, n2, etc), which
+       * can be any characters from this set "01234567890:;<=>?".  What the non
+       * digit ones mean is up to the command.  Parameters can be left out, but
+       * their defaults are command dependant.
+       *
+       * Next is an optional [extra] part from this set of characters
+       * "!#$%&'()*+,-./", which includes double quotes.  Can be many of these,
+       * likely isn't.
+       *
+       * Finally is the "final" from this set of characters "@[\]^_`{|}~", plus
+       * upper and lower case letters.  It's private if it's one of these 
+       * "pqrstuvwxyz{|}~".  Though the "private" ~ is used for key codes.
+       *
+       * A full CSI command is the private, extra, and final parts.
+       *
+       * Any C0 controls, DEL (0x7f), or higher characters are undefined.
        * TODO - So abort the current CSI and start from scratch on one of those.
        */
 
