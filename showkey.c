@@ -2,7 +2,10 @@
  *
  * Copyright 2014 David Seikel <won_fang@yahoo.com.au>
  *
- * Dunno yet if this is a standard.
+ * Not actually a standard, seems to be three different versions.
+ * The original kbd - http://kbd-project.org/
+ * The kbd fork console-tools - http://lct.sourceforge.net/
+ * A utility invented by Eric S. Raymond - http://catb.org/esr/showkey/
 
 USE_SHOWKEY(NEWTOY(showkey, "", TOYFLAG_USR|TOYFLAG_BIN))
 
