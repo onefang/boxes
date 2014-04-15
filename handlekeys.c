@@ -20,7 +20,7 @@ struct key
 
 // This table includes some variations I have found on some terminals.
 // http://rtfm.etla.org/xterm/ctlseq.html has a useful guide.
-// TODO - Don't think I got all the linux console variations.
+// TODO - Don't think I got all the linux console or xterm variations.
 // TODO - Add more shift variations, plus Ctrl & Alt variations when needed.
 // TODO - tmux messes with the shift function keys somehow.
 // TODO - Add other miscelany that does not use an escape sequence.
@@ -273,7 +273,7 @@ void handle_keys(long extra, int (*handle_event)(long extra, struct keyevent *ev
       }
     }
 
-    // Check for lone Esc first, wait a bit longer if it is
+    // Check for lone Esc first, wait a bit longer if it is.
     pendingEsc = ((0 == buffer[1]) && ('\x1B' == buffer[0]));
     if (pendingEsc)  continue;
 
