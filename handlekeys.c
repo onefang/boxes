@@ -176,10 +176,9 @@ static void handleSIGWINCH(int signalNumber)
     sigWinch = 1;
 }
 
-void handle_keys(long extra,
-  int (*handle_sequence)(long extra, char *sequence, int isTranslated),
-  void (*handle_CSI)(long extra, char *command, int *params, int count))
+void handle_keys(long extra, int (*handle_event)(long extra, struct keyevent *event))
 {
+  struct keyevent event;
   fd_set selectFds;
   struct timespec timeOut;
   struct sigaction sigAction, oldSigAction;
@@ -261,6 +260,12 @@ void handle_keys(long extra,
       else
       {
         buffIndex += j;
+        // Send raw keystrokes, mostly for things like showkey.
+        event.type = HK_RAW;
+        event.sequence = buffer;
+        event.isTranslated = 0;
+        handle_event(extra, &event);
+
         if (sizeof(buffer) < (buffIndex + 1))  // Ran out of buffer.
         {
           fprintf(stderr, "Full buffer - %s  ->  %s\n", buffer, sequence);
@@ -331,9 +336,18 @@ void handle_keys(long extra,
 
       if ('M' == buffer[1])
       {
-        // TODO - We have a mouse report, which is CSI M ..., where the rest is
+        // We have a mouse report, which is CSI M ..., where the rest is
         // binary encoded, more or less.  Not fitting into the CSI format.
         // To make things worse, can't tell how long this will be.
+        // So leave it up to the caller to tell us if they used it.
+        event.type = HK_MOUSE;
+        event.sequence = buffer;
+        event.isTranslated = 0;
+        if (handle_event(extra, &event))
+        {
+          buffer[0] = buffIndex = 0;
+          sequence[0] = 0;
+        }
       }
       else
       {
@@ -389,8 +403,12 @@ void handle_keys(long extra,
         t = csFinal + strlen(csFinal) - 1;
         if (('\x40' <= (*t)) && ((*t) <= '\x7e'))
         {
-          if (handle_CSI)
-            handle_CSI(extra, csFinal, csParams, p);
+          event.type = HK_CSI;
+          event.sequence = csFinal;
+          event.isTranslated = 1;
+          event.count = p;
+          event.params = csParams;
+          handle_event(extra, &event);
           buffer[0] = buffIndex = 0;
           sequence[0] = 0;
         }
@@ -398,12 +416,15 @@ void handle_keys(long extra,
     }
 
     // Pass the result to the callback.
-    if ((handle_sequence) && (sequence[0] || buffer[0]))
+    if (sequence[0] || buffer[0])
     {
       char b[strlen(sequence) + strlen(buffer) + 1];
 
       sprintf(b, "%s%s", sequence, buffer);
-      if (handle_sequence(extra, b, (0 != sequence[0])))
+      event.type = HK_KEYS;
+      event.sequence = b;
+      event.isTranslated = (0 != sequence[0]);
+      if (handle_event(extra, &event))
       {
         buffer[0] = buffIndex = 0;
         sequence[0] = 0;

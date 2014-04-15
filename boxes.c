@@ -1651,59 +1651,69 @@ struct CSI CSIcommands[] =
   {"R", termSize}	// Parameters are cursor line and column.  Note this may be sent at other times, not just during terminal resize.
 };
 
-// Callback for incoming CSI commands from the terminal.
-static void handleCSI(long extra, char *command, int *params, int count)
-{
-  int j;
 
-  for (j = 0; j < (sizeof(CSIcommands) / sizeof(*CSIcommands)); j++)
+// Callback for incoming sequences from the terminal.
+static int handleEvent(long extra, struct keyevent *event)
+{
+  switch (event->type)
   {
-    if (strcmp(CSIcommands[j].code, command) == 0)
+    case HK_CSI :
     {
-      CSIcommands[j].func(extra, params, count);
+      int j;
+
+      for (j = 0; j < ARRAY_LEN(CSIcommands); j++)
+      {
+        if (strcmp(CSIcommands[j].code, event->sequence) == 0)
+        {
+          CSIcommands[j].func(extra, event->params, event->count);
+          break;
+        }
+      }
       break;
     }
-  }
-}
 
-// Callback for incoming key sequences from the user.
-static int handleKeySequence(long extra, char *sequence, int isTranslated)
-{
-  struct _view *view = (struct _view *) extra;		// Though we pretty much stomp on this straight away.
-  struct keyCommand *commands = currentBox->view->content->context->modes[currentBox->view->mode].keys;
-  int j, l = strlen(sequence);
-
-  // Coz things might change out from under us, find the current view.
-  if (commandMode)	view = commandLine;
-  else		view = currentBox->view;
-
-  // Search for a key sequence bound to a command.
-  for (j = 0; commands[j].key; j++)
-  {
-    if (strncmp(commands[j].key, sequence, l) == 0)
+    case HK_KEYS :
     {
-      // If it's a partial match, keep accumulating them.
-      if (strlen(commands[j].key) != l)
-        return 0;
-      else
-      {
-        doCommand(view, commands[j].command);
-        return 1;
-      }
-    }
-  }
+      struct _view *view = (struct _view *) extra;		// Though we pretty much stomp on this straight away.
+      struct keyCommand *commands = currentBox->view->content->context->modes[currentBox->view->mode].keys;
+      int j, l = strlen(event->sequence);
 
-  // See if it's ordinary keys.
-  // NOTE - with vi style ordinary keys can be commands,
-  // but they would be found by the command check above first.
-  if (!isTranslated)
-  {
-    // TODO - Should check for tabs to, and insert them.
-    //        Though better off having a function for that?
-    mooshStrings(view->line, sequence, view->iX, 0, !overWriteMode);
-    view->oW = formatLine(view, view->line->line, &(view->output));
-    moveCursorRelative(view, strlen(sequence), 0, 0, 0);
-    updateLine(view);
+      // Coz things might change out from under us, find the current view.
+      if (commandMode)	view = commandLine;
+      else		view = currentBox->view;
+
+      // Search for a key sequence bound to a command.
+      for (j = 0; commands[j].key; j++)
+      {
+        if (strncmp(commands[j].key, event->sequence, l) == 0)
+        {
+          // If it's a partial match, keep accumulating them.
+          if (strlen(commands[j].key) != l)
+            return 0;
+          else
+          {
+            doCommand(view, commands[j].command);
+            return 1;
+          }
+        }
+      }
+
+      // See if it's ordinary keys.
+      // NOTE - with vi style ordinary keys can be commands,
+      // but they would be found by the command check above first.
+      if (!event->isTranslated)
+      {
+        // TODO - Should check for tabs to, and insert them.
+        //        Though better off having a function for that?
+        mooshStrings(view->line, event->sequence, view->iX, 0, !overWriteMode);
+        view->oW = formatLine(view, view->line->line, &(view->output));
+        moveCursorRelative(view, strlen(event->sequence), 0, 0, 0);
+        updateLine(view);
+      }
+      break;
+    }
+
+    default :  break;
   }
 
   // Tell handle_keys to drop it, coz we dealt with it, or it's not one of ours.
@@ -2481,7 +2491,7 @@ void boxes_main(void)
   updateLine(currentBox->view);
 
   // Run the main loop.
-  handle_keys((long) currentBox->view, handleKeySequence, handleCSI);
+  handle_keys((long) currentBox->view, handleEvent);
 
   // TODO - Should remember to turn off mouse reporting when we leave.
 

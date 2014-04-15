@@ -3,6 +3,21 @@
  * Copyright 2012 David Seikel <won_fang@yahoo.com.au>
  */
 
+enum keyeventtype{
+  HK_CSI,
+  HK_KEYS,
+  HK_MOUSE,
+  HK_RAW
+};
+
+struct keyevent {
+  enum keyeventtype type;	// The type of this event.
+  char *sequence;		// Either a translated sequence, or raw bytes.
+  int isTranslated;		// Whether or not sequence is translated.
+  int count;			// Number of entries in params.
+  int *params;			// For CSI events, the decoded parameters.
+};
+
 /* An input loop that handles keystrokes and terminal CSI commands.
  *
  * Reads stdin, trying to translate raw keystrokes into something more readable.
@@ -17,42 +32,44 @@
  *
  * handle_keys also sets up a SIGWINCH handler to catch terminal resizes,
  * and sends a request to the terminal to report it's current size when it gets
- * a SIGWINCH.  This is the main reason for handle_CSI, as those reports are
+ * a SIGWINCH.  This is the main reason for HK_CSI, as those reports are
  * sent as CSI.  It's still up to the user code to recognise and deal with the
  * terminal resize response, but at least it's nicely decoded for you.
  *
  * Arguments -
  *  extra           - arbitrary data that gets passed back to the callbacks.
- *  handle_sequence - a callback to handle keystroke sequences.
- *  handle_CSI      - a callback to handle terminal CSI commands.
+ *  handle_event    - a callback to handle sequences.
  *
- * handle_sequence is called when a complete keystroke sequence has been
- * accumulated.  The sequence argument holds the accumulated keystrokes.
- * The translated argument flags if any have been translated, otherwise you
- * can assume it's all ordinary characters.
+ * handle_event is called when a complete sequence has been accumulated.  It is
+ * passed a keyevent structure.  The type member of that structure determines
+ * what sort of event this is.  What's in the rest of the keyevent depends on
+ * the type -
  *
- * handle_keys should return 1 if the sequence has been dealt with, or ignored.
- * It should return 0, if handle_keys should keep adding more
+ * HK_CSI
+ *   sequence is the fully decoded CSI command, including the private  and intermediate characters.
+ *   isTranslated is 1, since the CSI command has been translated.
+ *   count is the count of translated CSI parameters.
+ *   params is an array of translateted CSI parameters.
+ *   Empty parameters are set to -1, coz -1 parameters are not legal,
+ *   and empty ones should default to something that is command dependant.
+ *
+ * HK_KEYS
+ *  sequence the keystrokes as ASCII, either translated or not.
+ *  isTranslated if 0, then sequence is ordinary keys, otherwise
+ *  sequence is the names of keys, from the keys[] array.
+ *  count and params are not used.
+ *
+ * For HK_KEYS handle_event should return 1 if the sequence has been dealt with,
+ * or ignored.  It should return 0, if handle_keys should keep adding more
  * translated keystroke sequences on the end, and try again later.
  * 0 should really only be used if it's a partial match, and we need more
  * keys in the sequence to make a full match.
  *
- * handle_CSI is called when a complete terminal CSI command has been
- * detected.  The command argument is the full CSI command code, including
- * private and intermediate characters.  The params argument is the decoded
- * parameters from the command.  The count argument is the number of decoded
- * parameters.  Empty parameters are set to -1, coz -1 parameters are not legal,
- * and empty ones should default to something that is command dependant.
+ * HK_MOUSE
+ *   sequence is the raw bytes of the mouse report.  The rest are not used.
  *
- * NOTE - handle_CSI differs from handle_sequence in not having to
- * return anything.  CSI sequences include a definite terminating byte,
- * so no need for this callback to tell handle_keys to keep accumulating.
- * Some applications use a series of keystrokes for things, so they
- * get accumulated until fully recognised by the user code.
  */
-void handle_keys(long extra, 
-  int (*handle_sequence)(long extra, char *sequence, int isTranslated),
-  void (*handle_CSI)(long extra, char *command, int *params, int count));
+void handle_keys(long extra, int (*handle_event)(long extra, struct keyevent *event));
 
 
 /* Call this when you want handle_keys to return. */

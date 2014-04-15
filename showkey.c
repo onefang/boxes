@@ -34,24 +34,6 @@ GLOBALS(
 #define TT this.showkey
 
 
-// Callback for incoming CSI commands from the terminal.
-static void handleCSI(long extra, char *command, int *params, int count)
-{
-  int i;
-
-  // Is it a cursor location report?
-  if (strcmp("R", command) == 0)
-  {
-    printf("CSI cursor position - line %d, column %d\r\n", params[0], params[1]);
-    return;
-  }
-
-  printf("CSI command %s - ", command);
-  for (i = 0; i < count; i++)
-    printf("%d ", params[i]);
-  printf("\r\n");
-}
-
 static void quit()
 {
   printf("Quitting.\r\n");
@@ -64,31 +46,70 @@ static struct keyCommand simpleKeys[] =
   {"^C",	quit}
 };
 
-// Callback for incoming key sequences from the user.
-static int handleKeySequence(long extra, char *sequence, int isTranslated)
+// Callback for incoming sequences from the terminal.
+static int handleEvent(long extra, struct keyevent *event)
 {
-  int j, l = strlen(sequence);
+  int i;
 
-  if (isTranslated)
-    printf("TRANSLATED - ");
-  else
-    printf("KEY - ");
-  printf("%s\r\n", sequence);
-
-  // Search for a key sequence bound to a command.
-  for (j = 0; j < (sizeof(simpleKeys) / sizeof(*simpleKeys)); j++)
+  switch (event->type)
   {
-    if (strncmp(simpleKeys[j].key, sequence, l) == 0)
+    case HK_RAW :
     {
-      // If it's a partial match, keep accumulating them.
-      if (strlen(simpleKeys[j].key) != l)
-        return 0;
-      else
+      printf("RAW ");
+      for (i = 0; event->sequence[i]; i++)
       {
-        if (simpleKeys[j].handler)  simpleKeys[j].handler();
+        printf("(%x) ", (int) event->sequence[i]);
+        if (32 > event->sequence[i])
+          printf("^%c, ", (int) event->sequence[i] + 'A' - 1);
+        else
+          printf("%c, ", (int) event->sequence[i]);
+      }
+      printf("-> ");
+      break;
+    }
+
+    case HK_KEYS :
+    {
+      int l = strlen(event->sequence);
+
+      if (event->isTranslated)
+        printf("TRANSLATED - ");
+      else
+        printf("KEY - ");
+      printf("%s\r\n", event->sequence);
+
+      // Search for a key sequence bound to a command.
+      for (i = 0; i < ARRAY_LEN(simpleKeys); i++)
+      {
+        if (strncmp(simpleKeys[i].key, event->sequence, l) == 0)
+        {
+          // If it's a partial match, keep accumulating them.
+          if (strlen(simpleKeys[i].key) != l)
+            return 0;
+          else
+            if (simpleKeys[i].handler)  simpleKeys[i].handler();
+        }
+      }
+      break;
+    }
+
+    case HK_CSI :
+    {
+      // Is it a cursor location report?
+      if (strcmp("R", event->sequence) == 0)
+      {
+        printf("CSI cursor position - line %d, column %d\r\n", event->params[0], event->params[1]);
         return 1;
       }
+
+      printf("CSI command %s - ", event->sequence);
+      for (i = 0; i < event->count; i++)
+        printf("%d ", event->params[i]);
+      printf("\r\n");
+      break;
     }
+
+    default :  break;
   }
 
   return 1;
@@ -117,7 +138,7 @@ void showkey_main(void)
   termIo.c_cc[VMIN]=1;
   tcsetattr(0, TCSANOW, &termIo);
 
-  handle_keys(0, handleKeySequence, handleCSI);
+  handle_keys(0, handleEvent);
 
   tcsetattr(0, TCSANOW, &oldTermIo);
   puts("");

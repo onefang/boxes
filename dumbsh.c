@@ -48,34 +48,6 @@ static void updateLine()
   fflush(stdout);
 }
 
-// Callback for incoming CSI commands from the terminal.
-static void handleCSI(long extra, char *command, int *params, int count)
-{
-  // Is it a cursor location report?
-  if (strcmp("R", command) == 0)
-  {
-    // Parameters are cursor line and column.
-    // NOTE - This may be sent at other times, not just during terminal resize.
-    //        We are assuming here that it's a resize.
-    // The defaults are 1, which get ignored by the heuristic below.
-    int r = params[0], c = params[1];
-
-    // Check it's not an F3 key variation, coz some of them use 
-    // the same CSI function command.
-    // This is a heuristic, we are checking against an unusable terminal size.
-    if ((2 == count) && (8 < r) && (8 < c))
-    {
-      TT.h = r;
-      TT.w = c;
-      updateLine();
-    }
-  }
-  // NOTE - The CSI differs from the sequence callback
-  // in not having to return anything.  CSI sequences include a
-  // definite terminating byte, so no need for this callback
-  // to tell handle_keys to keep accumulating.
-}
-
 // The various commands.
 static void deleteChar()
 {
@@ -184,43 +156,76 @@ static struct keyCommand simpleEmacsKeys[] =
   {"^P",	prevHistory}
 };
 
-// Callback for incoming key sequences from the user.
-static int handleKeySequence(long extra, char *sequence, int isTranslated)
+// Callback for incoming sequences from the terminal.
+static int handleEvent(long extra, struct keyevent *event)
 {
-  int j, l = strlen(sequence);
-
-  // Search for a key sequence bound to a command.
-  for (j = 0; j < (sizeof(simpleEmacsKeys) / sizeof(*simpleEmacsKeys)); j++)
+  switch (event->type)
   {
-    if (strncmp(simpleEmacsKeys[j].key, sequence, l) == 0)
+    case HK_KEYS :
     {
-      // If it's a partial match, keep accumulating them.
-      if (strlen(simpleEmacsKeys[j].key) != l)
-        return 0;
-      else
+      int j, l = strlen(event->sequence);
+
+      // Search for a key sequence bound to a command.
+      for (j = 0; j < ARRAY_LEN(simpleEmacsKeys); j++)
       {
-        if (simpleEmacsKeys[j].handler)  simpleEmacsKeys[j].handler();
-        return 1;
+        if (strncmp(simpleEmacsKeys[j].key, event->sequence, l) == 0)
+        {
+          // If it's a partial match, keep accumulating them.
+          if (strlen(simpleEmacsKeys[j].key) != l)
+            return 0;
+          else
+          {
+            if (simpleEmacsKeys[j].handler)  simpleEmacsKeys[j].handler();
+            return 1;
+          }
+        }
+      }
+
+      // See if it's ordinary keys.
+      // NOTE - with vi style ordinary keys can be commands,
+      // but they would be found by the command check above first.
+      if (!event->isTranslated)
+      {
+        if (TT.x < sizeof(toybuf))
+        {
+          int j, l = strlen(event->sequence);
+
+          for (j = strlen(toybuf); j >= TT.x; j--)
+            toybuf[j + l] = toybuf[j];
+          for (j = 0; j < l; j++)
+            toybuf[TT.x + j] = event->sequence[j];
+          TT.x += l;
+          updateLine();
+        }
+      }
+      break;
+    }
+
+    case HK_CSI :
+    {
+      // Is it a cursor location report?
+      if (strcmp("R", event->sequence) == 0)
+      {
+        // Parameters are cursor line and column.
+        // NOTE - This may be sent at other times, not just during terminal resize.
+        //        We are assuming here that it's a resize.
+        // The defaults are 1, which get ignored by the heuristic below.
+        int r = event->params[0], c = event->params[1];
+
+        // Check it's not an F3 key variation, coz some of them use 
+        // the same CSI function command.
+        // This is a heuristic, we are checking against an unusable terminal size.
+        if ((2 == event->count) && (8 < r) && (8 < c))
+        {
+          TT.h = r;
+          TT.w = c;
+          updateLine();
+        }
+        break;
       }
     }
-  }
 
-  // See if it's ordinary keys.
-  // NOTE - with vi style ordinary keys can be commands,
-  // but they would be found by the command check above first.
-  if (!isTranslated)
-  {
-    if (TT.x < sizeof(toybuf))
-    {
-      int j, l = strlen(sequence);
-
-      for (j = strlen(toybuf); j >= TT.x; j--)
-        toybuf[j + l] = toybuf[j];
-      for (j = 0; j < l; j++)
-        toybuf[TT.x + j] = sequence[j];
-      TT.x += l;
-      updateLine();
-    }
+    default :  break;
   }
 
   // Tell handle_keys to drop it, coz we dealt with it, or it's not one of ours.
@@ -269,7 +274,7 @@ void dumbsh_main(void)
 
   // Let's rock!
   updateLine();
-  handle_keys(0, handleKeySequence, handleCSI);
+  handle_keys(0, handleEvent);
 
   // Clean up.
   tcsetattr(0, TCSANOW, &oldTermIo);
