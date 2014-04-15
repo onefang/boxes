@@ -294,7 +294,7 @@ void handle_keys(long extra, int (*handle_event)(long extra, struct keyevent *ev
     // For a real timeout checked Esc, buffer is now empty, so this for loop
     // wont find it anyway.  While it's true we could avoid it by checking,
     // the user already had to wait for a time out, and this loop wont take THAT long.
-    for (j = 0; j < (sizeof(keys) / sizeof(*keys)); j++)
+    for (j = 0; j < ARRAY_LEN(keys); j++)
     {
       if (strcmp(keys[j].code, buffer) == 0)
       {
@@ -364,7 +364,7 @@ void handle_keys(long extra, int (*handle_event)(long extra, struct keyevent *ev
         // Unspecified params default to a value that is command dependant.
         // However, they will never be negative, so we can use -1 to flag
         // a default value.
-        for (j = 0; j < (sizeof(csParams) / sizeof(*csParams)); j++)
+        for (j = 0; j < ARRAY_LEN(csParams); j++)
           csParams[j] = -1;
 
         // Check for the private bit.
