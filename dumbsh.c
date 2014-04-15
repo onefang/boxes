@@ -133,7 +133,7 @@ static void startOfLine()
 }
 
 // The key to command mappings, Emacs style.
-static struct keyCommand simpleEmacsKeys[] =
+static const struct keyCommand simpleEmacsKeys[] =
 {
   {"BS",	backSpaceChar},
   {"Del",	deleteChar},
