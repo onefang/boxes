@@ -247,16 +247,9 @@ void handle_keys(long extra, int (*handle_event)(long extra, struct keyevent *ev
     }
     else if ((0 < p) && FD_ISSET(0, &selectFds))
     {
-      j = read(0, &buffer[buffIndex], sizeof(buffer) - (buffIndex + 1));
-      if (j < 0)  perror_exit("input error");
-      else if (j == 0)    // End of file.
-      {
+      j = xread(0, &buffer[buffIndex], sizeof(buffer) - (buffIndex + 1));
+      if (j == 0)    // End of file.
         stillRunning = 0;
-        fprintf(stderr, "EOF\n");
-        for (j = 0; buffer[j + 1]; j++)
-          fprintf(stderr, "(%x), ", (int) buffer[j]);
-        fflush(stderr);
-      }
       else
       {
         buffIndex += j;
