@@ -253,6 +253,8 @@ void handle_keys(long extra, int (*handle_event)(long extra, struct keyevent *ev
       else
       {
         buffIndex += j;
+        buffer[buffIndex] = 0;
+
         // Send raw keystrokes, mostly for things like showkey.
         event.type = HK_RAW;
         event.sequence = buffer;
@@ -261,13 +263,13 @@ void handle_keys(long extra, int (*handle_event)(long extra, struct keyevent *ev
 
         if (sizeof(buffer) < (buffIndex + 1))  // Ran out of buffer.
         {
+          buffer[buffIndex] = 0;
           fprintf(stderr, "Full buffer - %s  ->  %s\n", buffer, sequence);
-          for (j = 0; buffer[j + 1]; j++)
+          for (j = 0; buffer[j]; j++)
             fprintf(stderr, "(%x) %c, ", (int) buffer[j], buffer[j]);
           fflush(stderr);
-          buffIndex = 0;
+          buffer[0] = buffIndex = 0;
         }
-        buffer[buffIndex] = 0;
       }
     }
 
