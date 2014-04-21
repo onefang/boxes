@@ -239,7 +239,7 @@ void dumbsh_main(void)
   int fd;
 
   // Load bash history.
-  t = xmsprintf("%s/%s", t ? t : "", ".bash_history");
+  t = xmprintf("%s/%s", t ? t : "", ".bash_history");
   if (-1 != (fd = open(t, O_RDONLY)))
   {
     while ((t = get_line(fd)))  TT.history = dlist_add(&TT.history, t);
