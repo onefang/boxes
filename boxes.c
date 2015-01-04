@@ -1722,7 +1722,10 @@ static int handleEvent(long extra, struct keyevent *event)
 
 
 // The default command to function mappings, with help text.  Any editor that does not have it's own commands can use these for keystroke binding and such.
-// Though most of the editors have their own variation.  Maybe just use the joe one as default, it uses short names at least.
+// Though most of the editors have their own variation.
+// TODO - Maybe just use the joe one as default, it uses short names at least.
+//        Though vi is the only one in POSIX, so might be better to treat that one as the "standard" default.
+//        With some commands from others for stuff vi doesn't support.
 struct function simpleEditCommands[] =
 {
   {"backSpaceChar",	"Back space last character.",		0, {backSpaceChar}},
