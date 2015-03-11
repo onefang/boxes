@@ -1,0 +1,1130 @@
+What's needed for MC like program.  Call the library toyboxes, and the MC clone toysoldier.  B-)
+
+Use ANSI for terminal control.
+UTF-8 support is welcome in toybox where it makes sense, here it makes sense.
+
+Command defining - key, name, script, context.
+    Internal commands for the scripts.
+	Which can depend on the context.
+    Context is important.  Gotta handle stuff like vi modes, MC browse / view / edit modes, less search popping into readline mode, etc.
+    Learnable keys ala GIMP.
+
+Split the screen up into boxes.
+    Each box is a context.
+    Current box should have it's box graphics drawn in a different colour to highlight it.
+    Tab/shift-Tab cycles through boxes.
+	Though the editor has it's own use for tab.  Ctrl-tab as an alias perhaps?
+    Horizontal / vertical splits, with some sort of size control.
+	Each box can be split h or v once, 
+	with a control of what proportion the current box has (initially half),
+	a minimum size set by the contents,
+	and initially a copy of the pointer to the function that supplies it's contents / deals with it's input / includes it's context.
+	Later it can have that pointer set to something else.
+	Any given box can be deleted, which deletes it's sub boxes, drops it's pointer, and merges it's area with the one it split from.
+    See if screen and tmux agree on keys to use for box control.
+	Though, as usual, it's definable, but screen/tmux can be the defaults.
+    Choose to make a box full screen.  With menu to select other boxes, or swap back to full set of boxes.
+	Can be without borders and such.
+
+    The borders can be the usual box graphics, +-| characters, or inverse spaces, in that order of priority.
+    Show bits of text on top and bottom borders (left and right sides of them).
+	MC includes a couple of tiny mouse controlled widgets.
+    Perhaps a scroll widget in left or right borders.  Emacs dired has that.
+
+    Single line 'boxes', across the entire terminal, or across each box.
+	Should be context sensitive.
+	Menu - a list of commands showing their names and keys, with sub menus.
+	Function keys - Any function keys with commands showing the command names and key.
+	    Perhaps could just be a specialized menu.
+	Programmable status line.
+
+    Contents scrolling.
+	Virtual memory buffers.
+	    If a file viewer, just mmap it.
+	    Editor should be able to only load in bits of a large file, perhaps with a UNDO/REDO buffer.
+	    If command output, can create a temp file and mmap it.
+
+    file viewer (less, man).
+    editor (vi, mcedit, nano).
+	Like e3, make generic editor, with pluggable command keys, that kick in depending on how it's called.
+	    Uses a file list in a box to select files for opening.
+    Poor mans top and similar commands.
+	Top at least could make use of internal boxes, with the command list using a sortable list.
+    Put command output in boxes.  Each line can be selected and operated on.
+	Title bar across top, with click to sort style column names.
+	Each line is a single line 'box'.
+	ls.
+	ls with display options.
+	archive listing
+	find command result.
+	    All these can show current directory with diving in and out, or tree and current directory in a sub box.
+	    Also, allow an edit mode for editing the file attributes that are displayed, inline and full box if possible.
+    Shell console, with various text substitutions on input.
+	Can be a single line 'box' as well as an ordinary box.
+	Though the ordinary ones show their output in their box,
+	but the single line one should swap to a full screen, which can be a full screen box.
+
+A box has content.  Each content type is a context.  So we can have -
+    Plain scrollable text view.
+    Fancy text view (hex and so on).
+    Text edit.
+    Directory browse.
+    Script controlled.
+
+Popup widgets centered on box/boxes that they affect.
+    Labels, Text line (with optional history), check boxes, radio buttons, OK/Cancel/etc buttons, popup select list (useful for history to, can be just a menu specilization).
+    Widget sets, though try to keep things simple enough to not need them.
+    Notifications, with the addition of an abort button.
+    If a single widget in the popup, prompt in a single line "box" near the bottom (like nano).
+    Options.
+	Keep options down to a bare minimum.
+    Command params.
+	Fetch command params from internal toybox structures, map them to the appropriate widget.
+    F2 menu - list of commands to apply to file/s or current directory.
+	The list is selectable by file type.
+	Should use the same code as the menu box, and allow sub menus.
+    Context sensitive history lists for selecting stuff.
+	Could also be a widget inside the popup when needed.
+    Search / replace.
+    Delete / save confirmation.
+    Command progress meter.
+	Use xargs, and have it output something useful per 'argument' for the progress meter.
+	    xargs has an option to print the command to stdout, and to ask for confirmation per command.
+	    xargs can run multiple threads.
+
+Scripting, so we can make things fancy and tie it together.
+    Don't forget to make it 'scriptable' via internal C.
+    MC uses that for the F2 menu, user menu, and archive access.
+    We should use scripts to define most of the above.
+    I'd like to use Lua, but shell is likely a better choice.
+	Coz toybox will have a shell.
+	And MC scripts are mostly shell bits.
+    Should have an actual toyboxes command that you can feed toyboxes scripts into.
+	Might actually get away with using that to define most of MC, AND be the editor plugins.
+	See how far I get, but that's what I'll start with for testing.
+	I should reuse the old emu protocol for this.
+    Not gonna actually sort function names or key combos.
+	A linear search is good enough for keys, they only come in at human speeds.
+	People might want the scripts to run faster, but in toybox we strive for simplicity.
+	Well, maybe a binary search within each modules function block that is sorted by hand in the source code.
+	On the other hand, might be able to make use of the toybox command parsing infrastructure for script functions.
+	    Leaving that as a problem for toybox itself.
+	    But it's not reusable, it uses globals, and not sure if we can screw with those globals.
+
+NOTE - toybox is designed to only deal with one command per process.  So we can't call other toybox commands internally.
+	Or can we?  Toysh does it.
+
+Events
+    We need a time event.  Top has a resolution of hundredths of a second, though says that only tenths is officially supported.
+	Tenths makes sense for human speed UI.  Hundredths makes sense if you want video frame rates.  lol
+	Termios only allows tenths of seconds for read anyway.
+	    Hmm, seems read() wants to wait for at least one byte, it's a between byte counter.  Doh!
+	Select() is likely less simple, poll() the same, and epoll() seems to be linux specific.  All allow more precise timeouts.
+	On the other hand, Rob is using poll() in netcat.
+
+Common bits / differences.
+    Initial toybox command arguments.
+	Ability to change those within the editor.
+    Files - passed as arguments, or can add / remove them from the running editor.
+	Process the file through some proggy, or just some function of the editor script.
+	Save / save as / backups.
+	Modelines are actualy discouraged as a security issue by the standard, but encouraged by toybox to use vi modelines.
+	Filename completion.
+	Filename prompts could have a couple of features.
+	    Can pass things in and out of a shell command, append to the file, edit a specific fixed section of a file or special file (disk block editing!), or use stdin and stdout (joe in a pipe).
+    Directory / file browsing in a window.
+    Windows per current design.
+	Multiple files in the command line each have their own window.
+	Different / same file in each.
+	Each has it's own cursor / marks / block, etc.
+	Delete / scroll some other window.
+	Open a file in some other window, possibly creating one first.
+	Show one window full screen.
+	Method to show some hidden window, can be hidden if there's not enough space for them all.
+    Buffers - holds the contents of the files being edited / viewed.
+	Attached to windows, but can shift them around?
+	Edit / view / read only, named / unnamed buffers.
+	Special purpose buffers.
+	    Emacs has - scratch, help, grep, compile, gdb, man, shell, probably others.
+		Though most of those are just running some other command in a window.
+	    Kill ring buffer.
+		Kill goes to the buffer, delete just vanishes, on the other hand, this is really the difference between "cut" and "delete".
+		"Yank" just means "paste from kill buffer" then.
+	Emacs can have different working directory for each buffer, OR one global directory.
+	List them, perform some operation on the members of the list.  Go through them all, prompting to save modified buffers.
+    Display text - navigate within it, scroll it in various ways.
+	Many ways to display otherwise unprintable text.
+	    Inverted video for high bit characters.
+	    Just show high bit characters.
+	    UTF8.
+	    ^X
+	Could be a problem with "where's my cursor" for the code.
+	Hex mode, wrap mode, raw / parsed mode, as well as formatted / unformatted mode.
+	    Parsed mode has the text being processed by some command specified in the config file.
+	    Formatted mode converts common formatting stuff to bold / underline.
+	    Line numbers.
+	Scrolling can be definable amounts.
+	Some editors count buffer lines, some display lines.
+	Move to top, bottom, middle of screen / line.
+	Marks.
+	    One mark and cursor.
+		Hmmm, Emacs uses the idea of a "point" which is between characters, with the "cursor" on the right side.
+		    Not sure if this will be a problem.
+		Emacs has only one mark, and everything between point and mark is the "region", a block I think.
+	    Multiple marks - numbered, named, just arbitrary, automated marks for various reasons.  Line / line and character marks.
+	    Next / previous / goto / remove one / all marks.
+	Whitespace / word boundaries / line / paragraph / "sections", etc.  Should be definable.
+	    Vi has multiples types of all of them.  Pffft
+	Smooth scrolling (line by line).
+	Slow serial line support - do we need it?
+	    Maybe.  B-(
+    Status line.
+	Show cursor position, details of file / character under cursor / working directory.  Often used for line input of parameters to.
+	Top of screen, bottom, above the key display in nano.  Can have left, middle, right widgets.
+	Nano has essentially two status lines.
+	Expert mode to turn it off, disable it for more screen space.
+    Regexs - basic / extra / extended
+	Replacable stuff in search & replace.  Ex/vi has this as an option.
+    Commands - invoked immediately with no echo, or typed via readline.
+	Pre command numbers (usually not echoed) / post command arguments.  Also pre command regexs and other things to select the lines to work on.
+	Methods of repeating commands.  Repeat last / next command, possibly X times.
+	Direction / motion.
+	Execute line / buffer / file.
+	Select lines, apply command to them.
+	Parameter expansion.
+    Key handling.
+	Bind / learn keys.
+	    Emacs has "keymaps" for major and minor modes, as well as a global one.
+	    Unbind keys.  Mask keys from a lower level, but without actually binding them to anything, a NOP.
+	Command keys can be one or more keys.
+	    Emacs and wordstar generally use a control key followed by some other key.
+	Show help page in a window with key bindings.  Show binding for specific key.
+	Shortcut keys display.  Nano has two lines of 6 each, showing only the most common.  MC has one line, showing 10 function keys.  No one else cares?
+	Esc key same as Alt / Meta key OR used for function keys OR used by itself.  sigh
+	Meta key used to insert high bit characters.
+	Abort current command key.
+	Emacs has a keymap per buffer, which is the keybindings.
+	    A global keymap.
+	    The buffers major mode keymap.
+	    Minor modes can have keymaps that override the major mode keymap when the minor mode is turned on.
+	Del <-> BS swapping.
+    Readline type widget.  Called "minibuffer" in emacs.
+	For command parameters, also just go to one at the bottom to type commands into.
+	A fullscreen editor could be considered to just be a stack of these.
+	History, completion, editing, escape from.  Position and length.
+	    Same editing keys, and treat it just like a one line window.
+	    Restricted or different editing keys while in some random line editing mode.
+	Moving readline to some other line (the basis of full screen editing perhaps).
+	Perhaps allow it to autoexpand if the input covers multiple lines.
+	    Though that might be better to do as just creating more lines, then moving the readline between them.
+	    Still would need the prompt on the top one, and to know to send them all at once when done.
+	    How exactly does one create multiple lines?
+		Only way that makes sense is if the ENTER key is different from the "now do this" key.
+		Or wrapping long lines instead of scrolling them.
+	The prompt could include the default in ().
+    Mouse support - left click, double click, scroll wheel.
+	Only used to click on a widget, move cursor, or scroll around.
+	Shift click is used for X cut and paste support, think that just works from the terminal.
+    Shell - In a window / full screen.
+	Make editor a background task with bg / fg standard shell stuff.
+	Pass a block or buffer as stdin.  Append / insert stdout to the buffer.
+	The shell output can just appended to the window contents as text that can be edited like every other window.  When the cursor is at the bottom of the shell windov, stuff typed in is the next shell command.
+    Simple editing.
+	Move cursor, insert, delete, overwrite.
+    Basic editing.
+	Modes.
+	    Vi has a lot of them - command, insert, ex, and moooore.
+	    Emacs has definable modes that are a different concept to vi.
+		There are "major" and "minor" modes per buffer.
+		Major modes is for file type specific editing like "editing C, latex, etc" or "Dired".
+		    Includes things like indenting, syntax highlighting, function boundaries (for ctags I guess), invoking the right compiler, keymaps, etc.
+		    Can include other specialisations, like a python shell, and dired.
+		Minor modes are extras you can add, they seem to be things like "autofill", "wrap", "overwrite", "line numbers", etc.
+	    Insert / overwrite mode.
+	    Automatic detection of file type (typically source files) to put editor into different modes.
+	Cut, copy, paste, delete - blocks, word / line /etc, to end / beginning line, others.
+	    To / from other buffers, files, "clipfile", maybe even the clipboard/s (thought that's an X thing I think).
+	Blocks - cut, copy, move, write to file.
+	    Unhighlight block.
+	Search / replace - regex / shell glob / straight text / whole words.  Case / charset sensitive.  Forward / backward.
+	    Regexs - basic / extra / extended
+	    File / all files / within selection.  Wrap around searching.
+	    Incremental.  Interactive / all replace.  Inverted (find non matches).
+	    Highlight / filter found.
+	    Regex for the replace bit.   Replacable stuff in search & replace.  Ex/vi has this as an option.
+	    Can search mixed hex and strings.
+	    History, repeat, repeat in other direction.
+	Modified state.
+	    Can be used by some commands to pester the user.
+	    Ability to turn that state off.
+	Tabs / spaces / half tabs.  Setting tab size.
+    Advanced editing.
+	Insert a character that is otherwise hard to insert, like command keys.
+	Insert date/time.
+	Quick search for a character in current line / forward / back.
+	"Smart" home, home goes to actual beginning, or first non blank.
+	Replace lots of space horizontally / vertically with just one / zero spaces.
+	Insert empty line/s above / below.
+	End of line space removal.
+	Allow cursor beyond end of line.
+	Visible white space.
+	DOS / Mac line ending convert.  On the other hand, might just be good to do that transparently, remember on read, convert on save.
+	Change text encoding.
+	Add a newline at end of file if it's missing one.
+	    Think we are doing that anyway, but an option to turn that off might be good.
+	Transpose, upper, lower, reverse case, capitalize words.
+	Adding a prefix / suffix string to selected lines.
+	Indent / outdent / line wrapping / centreing which can be auto / manual.  Left and right margins.
+	Column blocks.
+	    Deleting might just replace the column block with spaces / tabs.
+	Macros.  Various ways of defining / invoking a macro.
+	    Nested macros.
+	Auto expanding abbreviations.
+	Auto save after certain commands, or certain time.
+	Multi level undo / redo.  Also undo current line (revert it?).
+	    Disable undo.
+	    Ability to list the undo "records"?
+	    Emacs undo boundaries?
+	Spell checker.
+	Pretty printer (likely via shell command like indent).
+	Email quote handling.
+	Count / highlight lines matching or not matching regexes.
+	Sort block.
+	Persistant cursor position and selection.
+	Complete the word being typed based on other words in the file.
+    Code editing.
+	Ctags - basically lookup a symbol (word cursor is on) in the ctags files, which gives you a position in some other file that defines this symbol.  Then display this other file somehow, probably allowing editing.
+	    Ctags is in the standards, but do we want to write a toybox version?
+	Bracket / character matching.  Goto / highlight matching bracket.  Auto insert the closing one.
+	    Include "insert one, blink the other".
+	    Auto detect code block for indenting?
+	Syntax highlighting.
+	Next / previous error (compile errors usually).
+
+Readline.
+    toybox has get_line() and get_rawline(), but they are not interactive readlines.
+    In order to have our readline() be useful for generic use, the keystrokes that do stuff must be definable.
+    So, what do we need?
+    GNU readline has (leaving out a few things) -
+	Editing
+	    How is a "word" defined?.
+	    Hitting ENTER anywhere in the line submits it.  An editor would want to actually insert the ENTER into the text.
+	    Move cursor / insert / delete / backspace / undo (all the way back) / revert.
+		Perhaps redo might be nice.
+	    Move cursor to start / end of line, forward / back one word, redraw.
+	    Cut / copy / paste.  Kill ring with ring rotation?
+		Entire line.
+		All spaces around cursor.
+		From cursor to mark.
+		Highlighted block.
+		From cursor to start / end of line.
+		    to end of word, or end of next word if between words.
+		    to beginning of word, or of the previous word if between words.
+		    to previous white space.  Different from above coz apparently white space is different from word boundaries.  shrugs
+	    Numbers in front of commands.  Vi and emacs probably need this?  More and less "needs" this.  Otherwise... eww.
+		For repeats, or sometimes to reverse the direction if it's negative.
+	    Insert / overwrite mode.
+	    Upper and lower casing characters or words.
+	    Transpose characters / words.
+	    Marks - setting a mark and moving the cursor to it / swapping with it.
+	    Character search within the string - forward / back.
+	    Insert comment - bloat we don't need.
+	History.
+	    Back / forward one line.  Goto start / end of history.
+	    Incremental and non incremental searching, forwards or back.
+		During incremental search - ability to abort and restore original line.
+	    Remember the last (incremental?) search.
+	    Either return the found history (ENTER), or allow editing (editing keys).
+	    Option to save edited history lines, and mark them as edited.
+	Show key bindings / macros / etc.
+	Tab completion.
+	    List / select completions.
+	    Cycle through the matches.
+	Macros!
+	Config files.
+	    Not likely to emulate these, we have our own needs, and it's not a standard.
+	Expansions.
+	    MC will want argument expansions at least.
+	    Though perhaps this is best left to the code that calls this to expand the result.
+
+more
+    Can handle switch between multiple files.
+    Searches are regexs.  Can also search for non matches.
+    Multiple marks.
+    Forward and back half screenful, with "half" being the specified number, but defaulting to actual half.
+    Shell commands (not in the standard).
+    Invoke the editor mentioned in EDITOR, or default to vi.  Pass line number if it's vi.
+    Print info about file.
+    Ctags.
+    Some commands are single letters, some are ":" followed by a single letter, possible with more text, then ENTER.
+	Or other variations.
+
+less
+    Has bracket matching, but only from top-open / bottom-close.
+    Can search between multiple files, or add more.
+	Files on the command line, add / remove files, just open a new file now.
+    Highlight found text.
+    Filter found lines.
+    Option to NOT do regex search.
+    Change the command line arguments while running.
+    Shell commands with replacable params.
+    Input processor - some proggy that the input file is processed through, the output of that is shown.
+	Um, why not use pipes and input redirection?
+
+ed - obsolete for toybox, ancestor of ex.
+    A line editor.
+    In command mode, type the command, then ENTER.
+    In input mode, type text, with "." on a line by itself to go back to command mode.
+    Uses one or two optional line addresses (can be regex) followed by a single character command, then arguments.
+    The "address" can be various symbols with various meanings, see the manual.
+    Usual basic editing and navigation commands.
+    Join lines.
+    Mark lines.
+    Display lines (with line numbers).
+    Copy / move lines.
+    Apply a command to a bunch of lines matching / not matching the address.
+    Insert a file / write lines to a file.
+    Search and replace.
+    Undo.
+    Shell command, with filename replacement character.
+
+sed
+    Stream editor.
+    Fairly similar to ed, except it applies a script of commands to each line in turn.
+    Branch to a label within the script.  Can test if a substitution happened before deciding to branch.
+    Includes a "hold space" for cut and paste type operations, as well as swapping.
+    Can output line numbers.
+    Can read in a file, or write to one.
+    Can be commented.
+
+ex - obsolete for toybox, but part of vi.
+    A line editor, apparently the line oriented editing mode for vi.
+	So while the command itself is obsolete, it's internal stuff might be needed for vi.
+	In fact a lot of the standard for vi just refers to ex.
+	":" means to perform an ex command from vi.  lol
+    Starts in command mode (":" prompt).
+    Basically a "type command then ENTER" command mode.
+    Text input mode (append, insert, change) ended by "." on it's own line.
+    Has line addresses before the commands, similar to ed.
+    Commands have complex parsing requirements.  Ewww.
+    Has some really basic command line editing.
+    Has a bunch of buffers, with modes.  Commands apply to a named buffer, or the unnamed one if no name is given.
+    Abbreviations and maps.  Same thing?  They interact.  lol
+	Think the difference is that maps don't have to have blank space after them.
+	They expand during typing.
+	Seems that maps are for binding to keys?
+    Set various options.
+    Shell command, with optional interaction.
+    Read commands from a file.
+    Can scan ctags files looking for regexs.
+    Can switch to "open" and "visual" modes, whatever they are.
+	"Visual" mode is just vi.
+	"Open" mode I think is a vi for dumb terminals?
+    Has a concept of "window", also not sure what that is.  Might just be the number of terminal lines.
+    Shell escape - pass selected lines to a shell command, replace them with whatever it returns.
+    Shift lines back and forth.  Indent and outdent in other words.
+    Execute a buffer as ex commands.
+    Regexs have extra thingies.
+    Replace commands can refer to other bits of text using parameters.  See the manual.
+    Autowrite - basicaly save the file after certain commands.
+    Mode that strips out non printables on file read.
+    Can be made ed compatible. lol
+    Can display line numbers.
+    Paragraph boundary pairs can be set.
+    Definable scroll distance.
+    Visual and open modes have "sections", with definable pairs of boundary characters.
+    Can show matching braces.
+    Can optionally warn on some commands if the buffers are modified.
+    Margin auto wrap and end of line blanks removal.
+    Can wrap searches.
+    "modelines" (as used at the top of toybox source files) are apparently is strongly discouraged by the standard.  shrugs
+    Overlaping copies are allowed.
+    Automatic marks created sometimes.
+
+vi
+    Notable for it's variety of modes, and it's standard command mode that uses non echoed ordinary keys for common commands.
+    "Visual" editor, a screen oriented superset of ex, that lets you use ex commands.
+    A lot of the standard simply refers to ex.
+    Seems to mostly be similar to ex commands, only done full screen, and with full screen navigation.
+    Has "open" and "visual" modes, but not sure what they are.  Also "ex" mode, with means using ex commands.
+	I think "open" mode is for dumb terminals, it's all done on the bottom line, perhaps with full screen redraws.
+	"Visual" mode then must be full screen editing.
+    Text input mode can return to command mode with Esc.
+    Has five kinds of "words" and four kinds of "bigwords", six types of "sections", four types of "paragraphs", and three types of "sentences".
+    There can be a multi digit count before commands, it's not echoed anywhere when not in a command line mode, the command key then does its command count times.
+	For instance typing "12h" does not echo anything, but just moves the cursor back 12 places when the "h" is hit.
+	Lots of those seem to be letters, or control keys, though there are others.
+    [count] ! motion shell-commands <newline> run a shell command, replacing count lines with the output.  Looks like you get to type and edit the command while you see it.
+    Move to matching brace.
+    Repeat last command, for specific commands.
+    Move to last context, where I think "context" means where we was before the last command, it gets a special mark.
+    Move to words, bigwords, sections, paragraphs, etc.
+    Reverse case.
+    Find character in current line.  Move cursor to before / after specific character.
+    Move to top / middle / bottom of screen.
+    Insert empty line above / below.
+    Paste above / below, depending on if the buffer is line or character mode as well.
+    Replace count characters with the entered character.
+    Undo current line.
+    Some editing command keys while in text input mode.
+
+nano
+    Has a file browser mode.
+    Has a title bar, with three areas for showing status type info.
+    And a status line, which shows messages and lets users type stuff like file names.
+    Optional shortcut lists show 12 of the most common keystrokes in the current mode, and can be mouse clickable.
+    Mouse moves the cursor, double click sets marks.
+    "Smart" home - the usual go to first non blank, or go to actual start of line.
+    Tabs to spaces.
+    Multiple file buffers.
+    Search and replace history.
+    Deal with DOS / Mac line endings sanely.
+    Restricted mode.
+    Smooth scrolling.
+    Setting tab size.
+    Syntax highlighting.
+    Display cursor position.
+    Backspace and delete fixes, coz that's always confusing.
+    Autoindent.
+    Optional line wrap.
+    "Soft wrapping", no idea what that is.
+    External spell checker.
+    Undo and redo.
+    Hard to use method to insert otherwise unusable characters.
+    Optional search case sensitivity.
+    Optional regex searches.
+    Email quote handling.
+    Source code bracket handling of some sort.
+    Turning command line options on and off within the editor.
+    Write selected text to a file.
+
+microemacs (microGNUemacs  lol)
+    Go to line number.
+    Scratch buffer, help buffer, grep buffer, compile buffer.
+    Named buffers - per file.  Can have their own working directory, or a global one for all.
+    Kill a named buffer, prompting if it's changed.
+    List buffers.
+    Has the concept of "modes", default ones are - fill (wrap), indent, overwrite, and notab.
+	Can set a list of (minor?) modes as default for buffer creation.
+    Run a script (commands from a file).
+    Split windows.  B-)
+    Window / buffer specific cursor and mark (depending on which emacs you have).
+	Can swap them.
+    Esc key same as Alt-key.
+    Get help, describe binding, describe key briefly (hit a key, it's binding is displayed).
+    Apropros - prompt the user for a string, open help buffer, list all commands with that string.
+    Auto execute - a shell glob pattern that is matched on files read into buffers, then executes a command.
+    Recenter - position cursor in center of screen / center of line / center of line counted from the bottom.
+    Open line - open up some space by inserting empty lines below cursor, leaving cursor at the top of them.
+    Quoted insert - insert the next key verbatim, ignoring what it's bound to.
+    Universal argument - repeat the next command 4 times, can apply to itself.
+    Toggle read only.
+    Find file read only.
+    Find alternate file - loading a different file into the current buffer, erasing the original buffer contents.
+    Find file in buffer, or load it into new buffer, then switch to it.
+    Find file other window - opens file in new buffer, splitting the window if needed.
+    Delete window.
+    Delete other windows.
+    Split window.
+    Enlarge / shrink window.
+    Next / previous window.
+    Scroll other window - scrolls the next window X pages.
+    Switch to buffer other window - "switch to buffer in another window"?
+    Switch to buffer - ask which buffer should be in this window.
+    Switch to a shell screen, and back again.
+    What cursor position - show a bunch of info about cursor position and what's there.
+    Next / previous error.
+    Dired - basically a multi window MC.  lol
+    Save some buffers - looks for buffers that need saving and prompts user.
+    Just one space - delete all white space around cursor, then insert one single space.
+    Query replace - an interactive search and replace.  Also a replace all with no interaction.
+	Oh nice - can do a search and replace with a regex for both the search string, AND for the replacable strings (selecting which ones get replaced with that regex).
+    Beginning / end of buffer.
+    Capitalize / upper / lower word.
+    Delete word.
+    Delete blank lines.
+    Delete horizontal / vertical space.
+    Delete leading / trailing space.
+    Delete lines non / matching regex after cursor.
+    Hmm, difference between "kill" and "delete"?
+	"Kill" goes into the kill buffer, "delete" just vanishes.
+	"Yank" inserts things from the kill buffer.
+	Kill buffer is a ring buffer in full emacs, but might not be a ring in microemacs.
+	So it's just an old fashioned concept for "cut and paste".
+    Fill paragraph - just means to wrap and justify it.  Command to ask the user what the wrap column is.
+    Copy region as kill.
+    Execute extended command - does the readline thing to ask user for a command and arguments to run.
+    Execute one buffer / line.
+    Not modified - turn off the modified flag in current buffer.
+    Blink and insert - insert a character, then search backwards for it's match (bracket, or the character itself) and blink that.
+    Mini buffer - it's just a readline for command arguments and such, but treated as a one line window, with an uneditable prompt.
+	It does have the trick of expanding to more lines if it's content goes over multiple lines.
+	The prompt can include a default argument in ().
+    Numbers can proceed commands, seems to be what the universal argument is for.
+	Looks like they have a key to introduce them, then get put into the mini buffer.
+	"Digit-argument" and "negative-argument" might be the functions for that.
+    Swap Del and BS.
+    C program "mode" - no idea what that involves.
+    Count regex non / matches.
+    Define key (includes a keymap, what ever they are).  Can also undefine a key, and there's a "global" keymap.  Can also bind keys in specific modes.
+    Meta key can insert 8 bit characters, or not.
+    Keyboard quit - abort current action.
+    Insert spaces instead of tabs.
+    Toggle overwrite / insert mode.
+    Add a prefix string to lines in a selected region.  Or set that string.
+    Show working directory in the status line.
+    Refresh screen, including recomputing window sizes if needed.
+    Scroll window without changing cursor position within window.
+    Toggle read only.
+    Undo boundaries?
+    Undo on/off.
+    List undo records for current buffer, in a new buffer.
+
+wordstar (joe, turbo C) - Using joe, which also comes in emacs and pico flavours.
+    Help window, with commands to page through that help text.
+    Something about "inverting" 8 bit characters, but we want to be 8 bit clean.  Not a WordStar thing I think.  shrugs
+	Ah, for displaying high bit characters in other languages, normally inverts the display, but "as is" mode just prints them normally.
+    Option to auto append a new line at end of files on save.
+    Option to disable the status line.
+    Windowed & buffered like emacs, but for when it's pretending to be emacs.
+	Can be windowed anyway.
+	Split window on same file.
+	Make one window full screen.
+	Can move to hidden windows (hidden when there's not enough space for them all).
+	Horizontal split only.
+	Height change.
+	Multiple files on the command line go to multiple windows.
+    Option to define how many lines are kept on screen between page up / down commands.
+    Option to not use X lines at the top, for embedding in a BBS.
+    Multi level undo and redo.
+    Scrolling.
+    Automatic detection of source code files, other types get word wraping and autoindent by default.
+	Can set left and right margins for word wrapping.
+	Can center between them to.
+	Can manually indent lines, highlighted blocks, or autodetected code blocks.
+    Command to insert a single space while in overwrite mode.
+	Overwrite mode makes backspace just move left, no deleting.
+    File name completion.
+    History.  History is described as a single line read only edit window, just like other windows, so the usual commands will work in them.
+    Status line can be edited in the setup string, to add or remove escape sequences that include various things.
+	Also a command to show the cursor position and character code in the status line.
+    Suspend the proggy and go to shell.  Actually, I think most editors have this in some form or another.
+	Most seem to use the shell foreground/background thingy for this.
+    Search prompts for the thing to search, then prompts for a bunch of character flags that are search options.
+	One of the options is if this is a replace command, then it prompts for the replacement text.
+	It's regexs are slash escaped.
+    Highlighted block can be sent through a shell filter command.
+    Highlighted block can be un highlighted.
+    Macros keyed by digit, and can be nested.
+    Repeat command, hit the repeat, type the numbers, hit the command you want repeated.
+	Also works with characters.
+    Column select mode.
+	Delete block command replaces the entire column with spaces and tabs instead of deleting.
+    Ctags support, prompt for symbol (default is word the cursor is on), search ctags files, replace the file in the current window with the file ctags points to, and the cursor position of the symbol definition.
+    Shell in a window.
+	Very intersening, the shell output is just appended to the window contents as text that can be edited like every other window.  When the cursor is at the bottom of the shell windov, stuff typed in is the next shell command.
+    Filename prompts have a couple of features.  Can pass things in and out of a shell command, append to the file, edit a specific fixed section of a file or special file (disk block editing!), or use stdin and stdout (joe in a pipe).
+    Keys can be bound in the settings file.
+
+mc viewer
+    Hex mode.
+    Can search mixed hex and strings.
+    Wrap mode.
+    Raw / parsed mode toggle, as well as formatted / unformatted mode toggle.
+	Parsed mode has the text being processed by some command specified in the config file.
+	Formatted mode converts common formatting stuff to bold / underline.
+
+mcedit / cool edit
+    User menu - run a script, insert result.
+    Mark columns.
+    Bookmarks, toggle, next, previous, "flush" (meaning to remove all bookmarks.)
+    Copy / cut insert clipfile as well as prompting for a file.
+    Highlight all lines with found text.
+    Search for hexidecimal, within selection, for whole words, and in "all charsets".
+    Goto matching bracket.
+    Show line numbers.
+    Find "declaration", back from and forward to declaration.
+	It's ctags support.
+    Change text encoding.
+    Create, invoke, and delete macros (hotkeys).
+    Spell check.
+    Email current file.
+    Sort selected lines.
+    Insert output of shell command.
+    Format (wrap) paragraph.
+    Run external format script on selection.
+    Insert date/time.
+    Half tabs.
+    Persistant cursor position and selection.
+    Visible white space.
+    Optional go beyond end of line.
+    Learn keys.
+    Syntax highlighting.
+    Edit syntax and menu files.
+
+Make the fancy features optional in the "wrap if(constant) around things so the compiler can optimise it out" way that Rob likes.
+    So the basic compile choices are -
+	File / stdout viewer.
+	Editor (the following options might depend on how the "pluggable" part is done).
+	    Minimal vi?
+	    Nice to have vi?
+	    Minimal emacs?
+	    Nice to have emacs?
+	    Nano?
+	    Minimal mcedit/cooledit?
+	    Nice to have mcedit/cooledit?
+	Lists.
+	Simple top like.
+	Fancy top like.
+	Simple shell.
+	Fancy shell.
+	Basic MC.
+	Full on MC with all bells and whistles.
+    With the fancy compile options being (only if they are substantial amounts of code to support) -
+	Full popups or mere single line prompts?
+	One pane, or multiple panes?
+	Function key single line 'box'?
+	Menu?
+	Status line?
+	Border texts?
+	Border widgets?
+	Sortable lists?
+	History lists?
+	Progress bar?
+	Shell text substitutions?
+	Scriptable?
+	Learnable keys?
+
+Probably got most of what we need to do screen / tmux / multitail, and other full screen terminal stuffs.
+
+Are we ncurses yet?  Or twin?  lol
+
+------------------------------------------------------------------------------------------------------
+
+NOTES
+
+From Rob -
+----------
+
+On 06/21/2012 09:28 AM, David Seikel wrote:
+> What are the chances that get_optflags() could be made re usable by
+> toys?  
+
+Well, right now you can put a NULL as your optstring and then set
+which->options yourself and call get_optflags().
+
+> For toys that need to make their own little scripting system for
+> example.  Currently it seems to want to use the toys global, and I'm
+> not sure if it's safe to screw with that after pulling all of my toys
+> options out of it.
+> 
+> Would it get reused like that for shell internal commands?  
+
+Already does. In toys/toysh.c function run_pipeline() look for the
+TOYFLAG_NOFORK bit.
+
+This probably needs to be genericized somewhere in lib, but I never got
+around to it.
+
+From Rob -
+----------
+
+I need to write a getline() with cursor control, which means I need to
+query the tty size. The magic for that is:
+
+struct winsize tty = { 0, 0, 0, 0 };
+int ret = ioctl(1, TIOCGWINSZ, &tty);
+
+plus $COLUMNS and $LINES, plus echo -e "\e[s\e[999C\e[999B\e[6n\e[u"
+
+Add command history parsing to getline().
+
+From Rob -
+----------
+
+Digging up ancient issues from toybox development, one of which is an
+interesting design issue with querying the terminal size.
+
+When you're on a serial console (happens a lot in the embedded world),
+the local tty device doesn't know the width and height of the window at
+the far end, so ioctl(TIOCGWINSZ) can't report it to you.
+
+If the term program at the other end supports ansi escape sequences
+(everything does, including xterms), there's an escape sequence you can
+use to ask it, but there's multiple levels of non-obvious to the
+implementation.
+
+The escape sequence itself is "\e[6n", to which the terminal program
+responds with another escape sequence, "\e[YY;XXR" where the "XX" part
+is a decimal number with the current cursor's Y location, and XX is the
+cursor X location. (Both decimal, top left is 1;1.)
+
+Since what we want is the size of the screen, we wrap that in some more
+commands, saving the current position, moving to the cursor 999 down and
+999 to the right (which should stick it at the lower right corner),
+query that position, and the jump back to the saved location. The full
+escape sequence is therefore "\e[s\e[999C\e[999B\e[6n\e[u".
+
+The problem is, the response comes back from the terminal program on
+stdin: along with whatever else is coming in on stdin. There could be a
+delay of a significant fraction of a second (especially through a rial
+port, even when you aren't overcommitted and swapping), and there's no
+guarantee the terminal will actually respond. So blocking and waiting
+for a response isn't the greatest idea, and can eat other input the user
+has queued up.
+
+This means you need to do a nonblocking read, assemble an ansi sequence
+a piece at a time (luckily the term programs generate these atomically
+so you don't get part of an ansi sequence with user-typed keys in the
+middle of it), and keep any other data you get for use later. The
+logical place to do this is in the line editing code the shell has to
+have anyway, which responds to cursor keys, page up and down, and so on.
+
+From Rob -
+----------
+
+Less has to get it _right_, as does line editing for a command shell.
+Even before you get to cursor up: unix tty handling is epically crappy. 
+My commodore 64 could backspace past the left edge of the screen and 
+continue from the right edge one line up.  A TRS-80 could do this.  Unix 
+derivatives _can't_, you have to know when you're at the left edge of 
+the screen and do the ansi sequences for "cursor up one, jump right 
+999".  Which means you have to know when backspace puts you at the left 
+edge of the screen, which means you need to know when outputting normal 
+characters put you off the _right_ edge of the screen...
+
+That's right: if you don't know what your current screen size is, your 
+command shell can't backspace past a line wrap.  Welcome to unix 
+terminal handling.
+
+From Rob -
+----------
+
+Here's a fun one:
+
+cat /proc/mounts | less
+
+When less outputs the escape sequence to query terminal parameters, it  
+has to peek not stdin but /dev/tty.  Except the cursor keys scrolling up  
+and down also come from /dev/tty, as do "user hit forward slash and  
+wants to type in a search regex"...  Innit fun?
+
+Plus you have to figure out the width of what you're outputting, which  
+means isprint() and probably UTF8 awareness...  (Flashbacks to  
+fontmetrics in java 1.1, but we can assume monospace text grid...)
+
+From Rob -
+----------
+
+Alas, POSIX does not seem to like simple.  To start with, the spec
+requires "more" to be terminal aware, which isn't entirely surprising
+given what it does.  But it's not just _height_ aware, it's width aware
+too.
+
+It's actually kinda fiddly: more needs to be able to wrap lines at the
+screen size to figure out when to prompt, but the first 32 ascii
+characters (all the stuff below space) don't consistently print one
+character.  Some print nothing, some move the cursor around (tab,
+newline, linefeed, backspace, form feed, whatever the heck "vertical
+tab" does...)
+
+In theory I can hijack catv and just escape most of the low-ascii
+weirdness (so it's two characters, but it's _consistently_ two
+characters whatever $TERM thinks).  In practice, when not hooked up to a
+tty more is supposed to act like cat and pass data through unmodified...
+
+I plan to do the simplest standards conformant implementation I can, and
+every once in a while I go "you know, the standard's nuts, let's just
+document the divergence"...
+
+
+From Rob -
+----------
+
+Keep in mind that Unix doesn't implement backspace sanely (like the
+commodore 64 did), thus you have to figure out when you're at the left
+edge of the screen (keeping track of your cursor position)
+
+That's why if you do "echo -n this will screw bash up" and then cursor
+up a few times bash's command history gets all wonky because it _thinks_
+it knows where the cursor is but actually started farther to the right. 
+(I contributed ansi escape screen position querying code to busybox to 
+improve the situation for ash.)
+
+From Rob -
+----------
+
+The question here is how much of this we already need to do for shell
+history, which is what I was going to implement first. (Actually the one
+I've already sat down and wrestled with is "more", which turns out to
+have rather a lot of these issues as well. Knowing what printable
+characters actually _print_ so you know where your darn cursor is and
+where the screen wraps. You'd think less would have more issues here,
+but more actually hits just about all of 'em...)
+
+Moving the cursor isn't the issue. Querying the screen size is a
+reasonably contained issue. Knowing how the cursor will move when you
+print out an arbitrary string: that's the hard part. (utf8 awareness is
+kinda required here. And I'm assuming a monospaced font even in klingon.
+And replacing the !isprint() characters below space with escape
+sequences...)
+
+
+From Rob and others -
+---------------------
+
+http://lists.busybox.net/pipermail/busybox/2008-October/067348.html
+
+http://lists.busybox.net/pipermail/busybox/2009-May/069314.html
+
+From Rob -
+----------
+
+Implementing ascii programming in the library itself was what I was
+referring to.  (It's on my todo list...)  All sorts of stuff needs it:
+more, toysh, vi...  Even ls wants to know the width of the screen for -C
+mode.
+
+The problem is parsing the replies, since the user could type arbitrary
+stuff.  It's stdout that needs to be a tty (because "ls | blah" is not
+going to a tty even if stdin is a tty), but the input _could_ come back
+in on stdin if that's another filehandle to the same tty... as could any
+other random input.  If you're filtering all your input through a line
+reading function that needs to parse cursor keys to implement command
+history, doing this is easy. But if _all_ you care about is the probe
+response and you want to leave the rest of the input alone, it's kinda
+hard.
+
+What I might wind up doing is adding it to toysh and having that export
+COLUMNS and LINES environment variables. It wouldn't catch resizes in
+the middle of a command, but I think I'm ok with that...
+
+
+------------------------------------------------------------------------------------------------------
+
+/*
+key / mouse	-> command
+menu choice	-> command
+border click	-> command
+popup + args	-> command
+typed string	-> command
+script call	-> command
+script callback	-> command
+C call		-> command
+
+Arguments - should use the same argument defining stuff as used by the toys.
+    Keys and menus have to have fixed arguments, and take the rest from their content.
+    Popup and typed get their arguments from what the user selected in the popup, or typed.
+    Popup is told what it's widgets are and how they map to arguments.
+    Popups eventually construct a command string.
+    Script call uses generic text to call the command and set it's arguments.
+    Script callback should be similar.
+    C calls can call the functions direct, or even just pass a string command.
+
+So every command call involves it's content, and can take default arguments from that content, to be overridden by arguments.
+Keys and menus just have arguments coded into their string on definition, though might mostly be argument less.
+Popups have a structure that defines their argument widgets, and how to turn them into command arguments.
+Popups need to be created from string commands to.
+Typed commands can just have their arguments as part of the typed string.
+Scripts and callbacks just send a string that is treated the same way as typed commands.
+C can do the same as scripts, but should be able to call things directly.
+
+Sending commands back to scripts, should use the same format as our commands.
+
+Would be nice to have parameter substitution to, but that would have to be per content.
+
+Use an event system.
+
+---------------------------------------------
+
+Events
+    keystroke / mouse click
+    menu item select
+    timer
+    draw all
+    scroll contents
+    box was redrawn?
+    box destroyed
+    leave box
+    enter box
+
+void doScript(struct content *content, char commandString, struct event *event, void *blob)
+
+Define a command
+    name, argsDefinitionString, pointer to C function - void myCommand(struct box *box, char *command, struct ToyboxArguments *args, struct event *event, void *blob)
+
+Define a key
+    keyName, commandString
+
+Define a menu item
+    menuTitle, commandString
+
+Define a border widget
+    borderPosition, borderType, textOrCommand
+
+Define a popup
+    popupName, commandStub, thingThatMapsWidgetsToArgs
+
+Define a script callback
+    name, command, someKey
+
+---------------------------------------------
+
+Script interface.
+
+We might have multiple scripts running, but only one per box.
+    But what if a script wants to split it's box?
+They can't access our data structures, and we can't access theirs.
+All needs to be done via stdin/stdout plain text, which should all look like the commands in the rest of the system.
+
+Scripts can register simple callbacks on these events - key, menu, timer, box destroyed.
+The first three might want to return a damage list.
+The last means that the box wants to be destroyed, but the script gets a chance to clean up.
+
+Scripts need to be able to hook into the damage system, so there needs to be a text representation of damage areas.
+
+boxes  <->  script
+
+Boxes knows which script is attached to which box.
+Registering a key for the box is optional, and it's only passed back if it exists.
+A split box gets no key, or can have the key optionally sent with the split command.
+    So how does the script deal with stuff coming from multiple boxes?
+
+<-	keyForBox someKey
+<-	registerKey keyName, commandString   arguments
+<-	registerKey keyName, callBackCommand arguments
+user hits a key
+    if the key has a command, execute it.
+	if the command is not one of ours, send it to the script instead
+->	callBackCommand arguments, someKey
+	otherwise do our command
+    else
+	send the key event to the script.
+->	handleEvent keyName, someKey
+
+    In any case, the script might want to change things in response.
+    Note that it could do these at any time.
+<-	damage x, y, h, w
+	line
+	line
+	line
+	line
+->	doneRedraw someKey
+<-	border borderPosition, borderType, textOrCommand
+<-	status line
+
+ *
+ */
+
+
+struct function
+{
+    name			// Name for script purposes.
+    description			// Human name for the menus.
+    type
+    union
+    {
+	*scriptCallback
+	*cFunction
+    }
+};
+
+struct command
+{
+    key				// Note that any given context might have different keys for any given function.
+    *function
+};
+
+struct item
+{
+    type
+    union
+    {
+	*command
+	*menu
+    }
+}
+
+struct menu
+{
+    *items[]			// Circular pointer definiton for sub menus.
+}
+
+struct context			// Somehow I get the feeling I'm having a failure of imagination here with the menus and function keys.  Might be better to manage them seperately per box, but have common ones available?  Nano might have a problem with this.
+{
+    *commands[]			// The master list, the ones pointed to by the menu structs should be in this list.
+    menu *menu			// Can be NULL.
+    menu *functionKeys		// Can be NULL.
+    // This can be used as the sub struct for various context types.  Like viewer, editor, file browser, top, etc.
+    // Could even be an object hierarchy, like generic editor, which Basic vi inherits from.
+};
+
+char borderchars[][]
+{
+    // usual box graphic symbols
+    '-|+',
+    // ANSI code for inverse spaces.
+}
+
+struct borderWidget
+{
+    text
+    *clickFunction(int position)
+}
+
+struct border
+{
+    *topLeftWidget
+    *topRightWidget
+    *bottomLeftWidget
+    *bottomRightWidget
+    *leftWidget
+    *rightWidget
+}
+
+struct damage
+{
+    X, Y, W, H			// The rectangle to be redrawn.
+    char **lines		// Pointer to an array of text lines, or NULL.
+    *damage			// Perhaps a linked list might be in order, for fast redraws.
+}
+
+struct content			// For various instances of context types, in other words, the editor might have several files open, so one of these per file.
+{
+    minW, minH, maxW, maxH
+    *context
+    *handleEvents()		// Should set the damage list if it needs a redraw, and flags if border or status line needs updating.
+				// Keyboard / mouse events if the box did not handle them itself.
+				// DrawAll event for when drawing the box for the first time, on reveals for coming out of full screen, or user hit the redraw key.
+				// Scroll event if the content wants to handle that itself.
+				// Timer event for things like top that might want to have this called regularly.
+    *doneRedraw()		// The box is done with it's redraw, so we can free the damage list or whatever now.
+    *delete()
+    // This can be used as the sub struct for various content types.
+};
+
+struct contentData
+{
+    *border			// Can be NULL.
+    *statusLine			// Text of the status line, or NULL if none.
+    offsetX, offsetY, W, H	// Offset and size within the content, coz box handles scrolling, usually.
+    bool redrawStatus, redrawBorder
+    *damage			// Can be NULL.  If not NULL after content->doneRedraw(), box will free it and it's children.
+    void *data			// The content controls this blob, it's specific to each box.
+}
+
+struct box
+{
+    box *sub, *parent
+    bool noBorderOnFullScreen
+    bool horizontalSplit	// Marks if it's horizontally or vertically split.
+    splitProportion		// proportion of this boxes part of the split, the sub box gets the rest.
+    *content
+    contentData			// Data blob specific to this box, passed to each content function.  For sharing contents, like a split pane editor for instance.  Not a pointer, but the struct.
+    X, Y, W, H			// Position and size of the box itself, not the content.  Calculated, but cached coz that might be needed for speed.
+    cX, cY			// Position of the content within the box.  Calculated, but cached coz that might be needed for speed.
+};
+
+box root;			// Always a full screen, parent of the rest of the boxes, or the only box.
+box current;
+bool currentIsFullScreen;

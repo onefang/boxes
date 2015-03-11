@@ -1,0 +1,6 @@
+xterm current box characters are wrong
+joe - ^K^D not working, but ^Kd is
+  Even odder, ^D works, all other ^K^? combinations work.
+F1 seems to not work, at least under xterm.
+
+should clear the command line prompt when not in use
